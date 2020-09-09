@@ -7,7 +7,7 @@ using UnityEditor.Animations;
 using System;
 using EditAnimatorController;
 
-public class GenerateAll : EditAnimatorController
+public class GenerateAll : EditAnimatorControllerBase
 {
 //    [Serializable]
 //    public class PickupDefinition

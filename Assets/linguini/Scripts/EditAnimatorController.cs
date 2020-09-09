@@ -29,6 +29,15 @@ namespace EditAnimatorController
     public class EditAnimatorControllerBase : MonoBehaviour
     {
         /// <summary>
+        /// Check whether the <see cref="controllor"/> is empty or not.
+        /// </summary>
+        /// <returns><c>true</c> when <c>AnimatorControllor</c> is not empty.</returns>
+        protected bool IsAnimatorControllorNotEmpty() =>
+            controllor.parameters.Length != 0
+            || controllor.layers.Length != 1
+            || controllor.layers[0].stateMachine.states.Length != 0;
+
+        /// <summary>
         /// Adds a new <c>AnimatorControllerLayer</c> from <c>AnimatorStateMachine</c>
         /// </summary>
         /// <param name="stateMachine"><c>AnimatorStateMachine</c> constituting the new layer. </param>
@@ -90,12 +99,12 @@ namespace EditAnimatorController
         }
 
         /// <summary> 
-        /// Adds new AnimatorControllerParameter to <see cref="controllor"/>, if the intended parameter doesn't exist.
-        /// Returns true when the intended parameter is existing after AddParameterIfNotExists() is called (Does not distinguish whether it Existed in the first place or added by this method), returns false when a AnimatorControllerParameter with intended name exists but has different type.
+        /// Adds new AnimatorControllerParameter to <see cref="controllor"/> if the intended parameter doesn't exist.
+        /// Returns true when the intended <c>AnimatorControllerParameter</c> is existing after <c>AddParameterIfNotExists()</c> is called (Does not distinguish whether it Existed in the first place or added by this method), returns false when a <c>AnimatorControllerParameter</c> with intended name exists but has different type.
         /// </summary>
-        /// <param name="name">Name of AnimatorControllerParameter to add.</param>
-        /// <param name="type">Type of AnimatorControllerParameter to add.</param>
-        /// <returns></returns>
+        /// <param name="name">Name of <c>AnimatorControllerParameter</c> to add.</param>
+        /// <param name="type">Type of <c>AnimatorControllerParameter</c> to add.</param>
+        /// <returns>Whether the <c>AnimatorControllerParameter</c> is existing in the <see cref="controllor"/></returns>
         protected bool AddParameterIfNotExists(string name, AnimatorControllerParameterType type)
         {
             foreach (AnimatorControllerParameter param in controllor.parameters)

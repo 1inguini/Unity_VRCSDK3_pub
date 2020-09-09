@@ -7,46 +7,48 @@ using UnityEditor.Animations;
 using System;
 using EditAnimatorController;
 
+
+/// <summary>
+/// Definition of <c>GameObject</c>s constituting a pickup gimmick.
+/// </summary>
+[Serializable]
+public class PickupDefinition
+{
+    public static GameObject pickupObject;
+
+    [Serializable]
+    public class HandDefinition
+    {
+        public static GameObject pickupPoint;
+        public static int handGesture;
+    }
+    public static HandDefinition handL;
+    public static HandDefinition handR;
+}
+
 public class GenerateHandPickAnimatorControllor : EditAnimatorControllerBase
 {
-    [Serializable]
-    public class PickupDefinition
-    {
-        public GameObject pickupObject;
-
-        [Serializable]
-        public class HandDefinition
-        {
-            public GameObject pickupPoint;
-            public int handGesture;
-        }
-        public HandDefinition handL;
-        public HandDefinition handR;
-    }
-
-    //  Array of a collection of an GameObject to be picked up, index of hand gesture,
+    /// <summary>
+    /// Array of a collection of an GameObject to be picked up, index of hand gesture,
+    /// </summary>
     public PickupDefinition[] objectsToPickup;
 
-    // Parameters
+    /// <summary>
+    /// Parameters to detect hand gesture.
+    /// </summary>
     private void AddParameters()
     {
         AddParameterIfNotExists("GestureLeft", AnimatorControllerParameterType.Int);
         AddParameterIfNotExists("GestureRight", AnimatorControllerParameterType.Int);
     }
 
-    private void AddOLayersforObject(GameObject obj)
+    private void AddObjectEnable(GameObject obj)
     {
-        // Add Layers for picking up "pickupObject" 
-        AddObjectEnable();
-    }
-
-    private void AddObjectEnable()
-    {
-        // Layer CubeEnable
+        // Layer ObjectEnable
         AddAnimatorControllerLayer(
             new AnimatorStateMachine()
             {
-                name = "CubeEnable",
+                name = obj.name + "Enable",
                 states = new ChildAnimatorState[]
                 {
                 }
@@ -54,16 +56,23 @@ public class GenerateHandPickAnimatorControllor : EditAnimatorControllerBase
             );
     }
 
+    /// <summary>
+    /// Add Layers for picking up <paramref name="obj"/> 
+    /// </summary>
+    /// <param name="obj"><c>GameObject</c> to pick up</param>
+    private void AddOLayersforObject(GameObject obj)
+    {
+        AddObjectEnable(obj);
+    }
+
+
     public void Generate()
     {
-        if (controllor.parameters.Length != 0
-            || controllor.layers.Length != 1
-            || controllor.layers[0].stateMachine.states.Length != 0)
+        if (IsAnimatorControllorNotEmpty())
         {
-            Debug.LogError("AnimationController not empty");
+            Debug.LogError("AnimatorControllor: " + controllor.name + " not empty.");
             return;
         }
-
         AddParameters();
 
         //AddFacialExpressionLayer();
@@ -73,6 +82,9 @@ public class GenerateHandPickAnimatorControllor : EditAnimatorControllerBase
 
 }
 
+/// <summary>
+/// Custom Inspector GUI for adding a button to call <c>Generate()</c> method.
+/// </summary>
 [CustomEditor(typeof(GenerateHandPickAnimatorControllor))]
 public class GenerateAnimationControllerEditor : Editor
 {
