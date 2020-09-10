@@ -2,46 +2,89 @@
 
 using UnityEngine;
 using System;
+using System.Linq;
 using EditAnimatorController;
 using UnityEditor.Animations;
 using UnityEditor;
 using Mochineko.SimpleReorderableList;
+using System.Collections.Generic;
+
+/// <summary>
+/// VRChat's hand gestures. convert to in by <c>(int)someHansdGestureVariable</c>
+/// </summary>
+[Serializable]
+public enum HandGesture
+{
+    Neutral,
+    Fist,
+    HandOpen,
+    FingerPoint,
+    Victory,
+    RockNRoll,
+    HandGun,
+    ThumbsUp,
+}
 
 /// <summary>
 /// Definition of <c>GameObject</c>s constituting a pickup gimmick.
 /// </summary>
 [Serializable]
-[CustomPropertyDrawer(typeof(PickupDefinition))]
-public class PickupDefinition : PropertyDrawer
+public class PickupDefinition
 {
     public GameObject pickupObject;
 
     [Serializable]
     public class HandDefinition
     {
+        public bool enable;
         public GameObject pickupPoint;
-
-        public enum HandGesture
-        {
-            Neutral,
-            Fist,
-            HandOpen,
-            FingerPoint,
-            Victory,
-            RockNRoll,
-            HandGun,
-            ThumbsUp,
-        }
         public HandGesture handGesture;
     }
     public HandDefinition handL;
     public HandDefinition handR;
+}
+
+//[CustomPropertyDrawer(typeof(PickupDefinition))]
+class PickupDefinitionProprtyDrawer : PropertyDrawer
+{
+    //public override float GetPropertyHeight(SerializedProperty property, GUIContent label)
+    //{
+    //    return 1 * EditorGUIUtility.singleLineHeight;
+    //}
 
     public override void OnGUI(Rect position, SerializedProperty property, GUIContent label)
     {
-        //base.OnGUI(position, property, label);
+        SerializedProperty sPickupPoint = property.FindPropertyRelative("pickupObject");
+
         EditorGUI.BeginProperty(position, label, property);
-        EditorGUI.PropertyField(position, property, new GUIContent(pickupObject ? pickupObject.name : "Please Select a GameObject"));
+
+        /// pickupObject
+        EditorGUI.PropertyField(
+            new Rect(
+                position.x,
+                position.y,
+                position.width,
+                EditorGUIUtility.singleLineHeight
+                ),
+            property.FindPropertyRelative("pickupObject"),
+            new GUIContent(
+                sPickupPoint.objectReferenceValue ?
+                sPickupPoint.objectReferenceValue.name :
+                "Select Object to Pickup"
+                )
+        );
+
+        //EditorGUI.PropertyField(
+        //    new Rect(
+        //        position.x,
+        //        position.y + EditorGUIUtility.singleLineHeight,
+        //        position.width,
+        //        EditorGUIUtility.singleLineHeight
+        //        ),
+        //    property.FindPropertyRelative("handL")
+        //    );
+
+        EditorGUI.EndProperty();
     }
 }
 
@@ -50,11 +93,9 @@ public class GenerateHandPickAnimatorController : EditAnimatorControllerBase
     /// <summary>
     /// Array of a collection of an GameObject to be picked up, index of hand gesture,
     /// </summary>
-    public PickupDefinition[] objectsToPickup;
-    void DrawListItems(Rect rect, int index, bool isActive, bool isFocused)
-    {
+    public List<PickupDefinition> objectsToPickup;
 
-    }
+
     /// <summary>
     /// Parameters to detect hand gesture.
     /// </summary>
@@ -110,34 +151,80 @@ public class GenerateHandPickAnimatorController : EditAnimatorControllerBase
 [CustomEditor(typeof(GenerateHandPickAnimatorController))]
 public class GenerateAnimationControllerEditor : Editor
 {
+    List<PickupDefinition> objectsToPickup;
+
     SerializedProperty controller;
-    ReorderableList objectsToPickup;
+    ReorderableList reorderableList;
+
+    private GameObject PickupObjectAtIndex(int index)
+    {
+        return objectsToPickup.ElementAt(index).pickupObject;
+    }
 
     private void OnEnable()
     {
+        objectsToPickup = (target as GenerateHandPickAnimatorController).objectsToPickup;
+
         controller = serializedObject.FindProperty("controller");
-        objectsToPickup = new ReorderableList(serializedObject.FindProperty("objectsToPickup"));
+        SerializedProperty sObjectsToPickup = serializedObject.FindProperty("objectsToPickup");
+
+        reorderableList = new ReorderableList(sObjectsToPickup);
+
+        reorderableList.Native.elementHeightCallback = (index) =>
+        (objectsToPickup[index].pickupObject == null ?
+        EditorGUIUtility.singleLineHeight :
+        EditorGUI.GetPropertyHeight(
+            sObjectsToPickup.GetArrayElementAtIndex(index)
+            )
+            ) + 2f;
+
+        reorderableList.Native.drawElementCallback = (rect, index, isActive, isFocused) =>
+        {
+            if (sObjectsToPickup.GetArrayElementAtIndex(index) == null)
+                return;
+            if (PickupObjectAtIndex(index) == null)
+            {
+                rect.height = EditorGUIUtility.singleLineHeight;
+                objectsToPickup[index].pickupObject = (GameObject)EditorGUI.ObjectField(
+                    rect,
+                    PickupObjectAtIndex(index),
+                    typeof(GameObject),
+                    true
+                    );
+            }
+            else
+            {
+                rect.x += 12f;
+                rect.width -= 12f;
+                EditorGUI.PropertyField(
+                    rect,
+                    sObjectsToPickup.GetArrayElementAtIndex(index),
+                    new GUIContent(PickupObjectAtIndex(index).name),
+                    true);
+            }
+        };
+
     }
 
     public override void OnInspectorGUI()
     {
+        // base.DrawDefaultInspector();
+
         GenerateHandPickAnimatorController generateAnimationController = target as GenerateHandPickAnimatorController;
-
-        //base.DrawDefaultInspector();
-
         serializedObject.Update();
 
         EditorGUI.BeginChangeCheck();
         {
-            if (controller != null)
-                EditorGUILayout.PropertyField(controller);
 
-            if (objectsToPickup != null)
-                objectsToPickup.Layout();
+            if (controller == null && reorderableList == null)
+                return;
+
+            EditorGUILayout.PropertyField(controller);
+            reorderableList.Native.DoLayoutList();
 
             if (GUILayout.Button("generate"))
             {
-                generateAnimationController.Generate();
+                // generateAnimationController.Generate();
             }
 
         }
