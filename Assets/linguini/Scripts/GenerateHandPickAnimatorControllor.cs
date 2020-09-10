@@ -1,12 +1,10 @@
-﻿using System.Collections;
-using System.Collections.Generic;
-using System.Linq;
+﻿#if UNITY_EDITOR
+
 using UnityEngine;
-using UnityEditor;
-using UnityEditor.Animations;
 using System;
 using EditAnimatorController;
-
+using UnityEditor.Animations;
+using UnityEditor;
 
 /// <summary>
 /// Definition of <c>GameObject</c>s constituting a pickup gimmick.
@@ -98,3 +96,5 @@ public class GenerateAnimationControllerEditor : Editor
         }
     }
 }
+
+#endif
