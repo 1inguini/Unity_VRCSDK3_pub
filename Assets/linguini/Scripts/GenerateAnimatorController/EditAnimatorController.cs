@@ -5,7 +5,6 @@ using System.Linq;
 using UnityEngine;
 using UnityEditor;
 using UnityEditor.Animations;
-using System;
 
 /// <summary>
 /// A Class to generate new position for each new <c>AnimatorState</c>
@@ -31,13 +30,13 @@ namespace EditAnimatorController
     public class EditAnimatorControllerBase : MonoBehaviour
     {
         /// <summary>
-        /// Check whether the <see cref="controllor"/> is empty or not.
+        /// Check whether the <see cref="controller"/> is empty or not.
         /// </summary>
-        /// <returns><c>true</c> when <c>AnimatorControllor</c> is not empty.</returns>
-        protected bool IsAnimatorControllorNotEmpty() =>
-            controllor.parameters.Length != 0
-            || controllor.layers.Length != 1
-            || controllor.layers[0].stateMachine.states.Length != 0;
+        /// <returns><c>true</c> when <c>AnimatorController</c> is not empty.</returns>
+        protected bool IsAnimatorControllerNotEmpty() =>
+            controller.parameters.Length != 0
+            || controller.layers.Length != 1
+            || controller.layers[0].stateMachine.states.Length != 0;
 
         /// <summary>
         /// Adds a new <c>AnimatorControllerLayer</c> from <c>AnimatorStateMachine</c>
@@ -46,7 +45,7 @@ namespace EditAnimatorController
         /// <param name="weight">Weight of the new layer, defaulted to 1</param>
         protected void AddAnimatorControllerLayer(AnimatorStateMachine stateMachine, float weight = 1)
         {
-            controllor.AddLayer(
+            controller.AddLayer(
                 new AnimatorControllerLayer()
                 {
                     defaultWeight = weight,
@@ -101,15 +100,15 @@ namespace EditAnimatorController
         }
 
         /// <summary> 
-        /// Adds new AnimatorControllerParameter to <see cref="controllor"/> if the intended parameter doesn't exist.
+        /// Adds new AnimatorControllerParameter to <see cref="controller"/> if the intended parameter doesn't exist.
         /// Returns true when the intended <c>AnimatorControllerParameter</c> is existing after <c>AddParameterIfNotExists()</c> is called (Does not distinguish whether it Existed in the first place or added by this method), returns false when a <c>AnimatorControllerParameter</c> with intended name exists but has different type.
         /// </summary>
         /// <param name="name">Name of <c>AnimatorControllerParameter</c> to add.</param>
         /// <param name="type">Type of <c>AnimatorControllerParameter</c> to add.</param>
-        /// <returns>Whether the <c>AnimatorControllerParameter</c> is existing in the <see cref="controllor"/></returns>
+        /// <returns>Whether the <c>AnimatorControllerParameter</c> is existing in the <see cref="controller"/></returns>
         protected bool AddParameterIfNotExists(string name, AnimatorControllerParameterType type)
         {
-            foreach (AnimatorControllerParameter param in controllor.parameters)
+            foreach (AnimatorControllerParameter param in controller.parameters)
             {
                 switch (JudgeParameterUniqueness(param, name, type))
                 {
@@ -119,22 +118,22 @@ namespace EditAnimatorController
                         return false;
                 }
             }
-            controllor.AddParameter(name, type);
+            controller.AddParameter(name, type);
             return true;
         }
 
         /// <summary>
         /// AnimationController to edit.
         /// </summary>
-        public AnimatorController controllor;
+        public AnimatorController controller;
 
         /// <summary>
-        /// Animation Clips in the same directory as the <see cref="controllor"/>.
+        /// Animation Clips in the same directory as the <see cref="controller"/>.
         /// </summary>
-        /// <returns>Animation Clips in the same directory as the <see cref="controllor"/> as <c>List<AnimationClip></c>.</returns>
+        /// <returns>Animation Clips in the same directory as the <see cref="controller"/> as <c>List<AnimationClip></c>.</returns>
         protected List<AnimationClip> AnimationClips()
         {
-            return AssetDatabase.LoadAllAssetsAtPath(AssetDatabase.GetAssetPath(controllor))
+            return AssetDatabase.LoadAllAssetsAtPath(AssetDatabase.GetAssetPath(controller))
                     .Where(a => a.GetType() == typeof(AnimationClip))
                     .Select(a => (AnimationClip)a)
                     .ToList();
