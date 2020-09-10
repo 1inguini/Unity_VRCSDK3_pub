@@ -29,67 +29,180 @@ public enum HandGesture
 /// Definition of <c>GameObject</c>s constituting a pickup gimmick.
 /// </summary>
 [Serializable]
-public class PickupDefinition
+[CustomPropertyDrawer(typeof(PickupDefinition))]
+public class PickupDefinition : PropertyDrawer
 {
-    public GameObject pickupObject;
+    public GameObject objectToPickup;
 
     [Serializable]
     public class HandDefinition
     {
         public bool enable;
         public GameObject pickupPoint;
+        public int handGestureInt;
         public HandGesture handGesture;
     }
+
     public HandDefinition handL;
     public HandDefinition handR;
-}
 
-//[CustomPropertyDrawer(typeof(PickupDefinition))]
-class PickupDefinitionProprtyDrawer : PropertyDrawer
-{
-    //public override float GetPropertyHeight(SerializedProperty property, GUIContent label)
-    //{
-    //    return 1 * EditorGUIUtility.singleLineHeight;
-    //}
+
+    private class SerializedHandDefinition
+    {
+        public SerializedProperty sHandDefinition;
+        public SerializedProperty sEnable;
+        public SerializedProperty sPickupPoint;
+        public SerializedProperty sHandGestureInt;
+        public SerializedProperty sHandGesture;
+
+        public SerializedHandDefinition(SerializedProperty serializedHandDefiniton)
+        {
+            this.sHandDefinition = serializedHandDefiniton;
+            sEnable = serializedHandDefiniton.FindPropertyRelative("enable");
+            sPickupPoint = serializedHandDefiniton.FindPropertyRelative("pickupPoint");
+            sHandGestureInt = serializedHandDefiniton.FindPropertyRelative("handGestureInt");
+            sHandGesture = serializedHandDefiniton.FindPropertyRelative("handGesture");
+        }
+
+        public void ClampGestureInt()
+        {
+            sHandGestureInt.intValue = Mathf.Clamp(
+                sHandGestureInt.intValue,
+                Enum.GetValues(typeof(HandGesture)).Cast<int>().Min(),
+                Enum.GetValues(typeof(HandGesture)).Cast<int>().Max()
+                );
+        }
+
+        public void GestureIntUpdated()
+        {
+            ClampGestureInt();
+            sHandGesture.enumValueIndex = sHandGestureInt.intValue;
+            Debug.Log("GestureIntUpdated");
+        }
+
+        public void GestureUpdated()
+        {
+            sHandGestureInt.intValue = sHandGesture.enumValueIndex;
+            Debug.Log("GestureUpdated");
+        }
+
+        public Rect DrawHandGesture(Rect position, GUIContent label)
+        {
+            void NewLine() => position.y += EditorGUIUtility.singleLineHeight;
+
+            NewLine();
+            if (sEnable.boolValue = EditorGUI.Toggle(
+                position,
+                label,
+                sEnable.boolValue
+                ))
+            {
+                EditorGUI.indentLevel++;
+                NewLine();
+                EditorGUI.PropertyField(
+                    position,
+                    sPickupPoint
+                    );
+
+                NewLine();
+                EditorGUI.PropertyField(
+                    new Rect(
+                        position.x,
+                        position.y,
+                        EditorGUIUtility.labelWidth + EditorGUIUtility.fieldWidth,
+                        position.height
+                        ),
+                    sHandGestureInt,
+                    new GUIContent("Hand Gesture")
+                    );
+                GestureIntUpdated();
+
+                EditorGUI.PropertyField(
+                    new Rect(
+                        position.x + EditorGUIUtility.labelWidth + EditorGUIUtility.fieldWidth,
+                        position.y,
+                        position.width - (EditorGUIUtility.labelWidth + EditorGUIUtility.fieldWidth),
+                        position.height
+                        ),
+                    sHandGesture,
+                    new GUIContent()
+                    );
+                GestureUpdated();
+
+                EditorGUI.indentLevel--;
+
+            }
+
+            return position;
+        }
+    }
+    private bool unfolded;
+
+    private SerializedProperty sObjectToPickup;
+    private SerializedProperty sEnableL;
+    private SerializedHandDefinition sHandL;
+    private SerializedHandDefinition sHandR;
+
+
+    public override float GetPropertyHeight(SerializedProperty property, GUIContent label)
+    {
+        SerializedProperty sObjectToPickup = property.FindPropertyRelative("objectToPickup");
+
+        SerializedHandDefinition sHandL =
+            new SerializedHandDefinition(property.FindPropertyRelative("handL"));
+
+        SerializedHandDefinition sHandR =
+            new SerializedHandDefinition(property.FindPropertyRelative("handR"));
+
+        int lines = 1;
+        if (unfolded) lines += 3;
+        if (sHandL.sEnable.boolValue) lines += 2;
+        if (sHandR.sEnable.boolValue) lines += 2;
+        return lines * EditorGUIUtility.singleLineHeight;
+    }
+
 
     public override void OnGUI(Rect position, SerializedProperty property, GUIContent label)
     {
-        SerializedProperty sPickupPoint = property.FindPropertyRelative("pickupObject");
+        void NewLine() => position.y += EditorGUIUtility.singleLineHeight;
 
+        SerializedProperty sObjectToPickup = property.FindPropertyRelative("objectToPickup");
+
+        SerializedHandDefinition sHandL =
+            new SerializedHandDefinition(property.FindPropertyRelative("handL"));
+        
+        SerializedHandDefinition sHandR =
+            new SerializedHandDefinition(property.FindPropertyRelative("handR"));
+
+        position.height = EditorGUIUtility.singleLineHeight;
         EditorGUI.BeginProperty(position, label, property);
 
-        /// pickupObject
-        EditorGUI.PropertyField(
-            new Rect(
-                position.x,
-                position.y,
-                position.width,
-                EditorGUIUtility.singleLineHeight
-                ),
-            property.FindPropertyRelative("pickupObject"),
-            new GUIContent(
-                sPickupPoint.objectReferenceValue ?
-                sPickupPoint.objectReferenceValue.name :
-                "Select Object to Pickup"
-                )
-        );
+        if (unfolded = EditorGUI.Foldout(position, unfolded, label))
+        {
+            NewLine();
+            EditorGUI.PropertyField(
+                position,
+                sObjectToPickup
+                );
 
-        //EditorGUI.PropertyField(
-        //    new Rect(
-        //        position.x,
-        //        position.y + EditorGUIUtility.singleLineHeight,
-        //        position.width,
-        //        EditorGUIUtility.singleLineHeight
-        //        ),
-        //    property.FindPropertyRelative("handL")
-        //    );
+            position = sHandL.DrawHandGesture(position, new GUIContent("Left Hand"));
+            position = sHandR.DrawHandGesture(position, new GUIContent("Right Hand"));
 
+            //NewLine(position);
+            //handL.handGesture = (HandGesture)EditorGUI.IntField(
+            //    position,
+            //    (int)handL.handGesture
+            //    );
+
+
+        }
         EditorGUI.EndProperty();
     }
 }
 
 public class GenerateHandPickAnimatorController : EditAnimatorControllerBase
 {
+    public PickupDefinition aaa;
     /// <summary>
     /// Array of a collection of an GameObject to be picked up, index of hand gesture,
     /// </summary>
@@ -151,14 +264,14 @@ public class GenerateHandPickAnimatorController : EditAnimatorControllerBase
 [CustomEditor(typeof(GenerateHandPickAnimatorController))]
 public class GenerateAnimationControllerEditor : Editor
 {
-    List<PickupDefinition> objectsToPickup;
+    private List<PickupDefinition> objectsToPickup;
 
-    SerializedProperty controller;
-    ReorderableList reorderableList;
+    private SerializedProperty controller;
+    private ReorderableList reorderableList;
 
     private GameObject PickupObjectAtIndex(int index)
     {
-        return objectsToPickup.ElementAt(index).pickupObject;
+        return objectsToPickup.ElementAt(index).objectToPickup;
     }
 
     private void OnEnable()
@@ -171,7 +284,7 @@ public class GenerateAnimationControllerEditor : Editor
         reorderableList = new ReorderableList(sObjectsToPickup);
 
         reorderableList.Native.elementHeightCallback = (index) =>
-        (objectsToPickup[index].pickupObject == null ?
+        (objectsToPickup[index].objectToPickup == null ?
         EditorGUIUtility.singleLineHeight :
         EditorGUI.GetPropertyHeight(
             sObjectsToPickup.GetArrayElementAtIndex(index)
@@ -185,7 +298,7 @@ public class GenerateAnimationControllerEditor : Editor
             if (PickupObjectAtIndex(index) == null)
             {
                 rect.height = EditorGUIUtility.singleLineHeight;
-                objectsToPickup[index].pickupObject = (GameObject)EditorGUI.ObjectField(
+                objectsToPickup[index].objectToPickup = (GameObject)EditorGUI.ObjectField(
                     rect,
                     PickupObjectAtIndex(index),
                     typeof(GameObject),
@@ -208,7 +321,7 @@ public class GenerateAnimationControllerEditor : Editor
 
     public override void OnInspectorGUI()
     {
-        // base.DrawDefaultInspector();
+        // DrawDefaultInspector();
 
         GenerateHandPickAnimatorController generateAnimationController = target as GenerateHandPickAnimatorController;
         serializedObject.Update();
@@ -230,7 +343,6 @@ public class GenerateAnimationControllerEditor : Editor
         }
         if (EditorGUI.EndChangeCheck())
             serializedObject.ApplyModifiedProperties();
-        serializedObject.ApplyModifiedProperties();
     }
 }
 
