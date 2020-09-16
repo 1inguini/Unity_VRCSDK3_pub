@@ -138,8 +138,8 @@
                         lightDir = _WorldSpaceLightPos0;
 
                         //ランバート反射を計算
-                        NdotL = max(0, dot(normal, lightDir));
-                        fout.color = fixed4(NdotL * _Color.xyz + fixed3(0.1,0.1,0.1), _Color.a);
+                        NdotL = clamp(dot(normal, lightDir), 0.1, 1);
+                        fout.color = fixed4(NdotL * _LightColor0 * _Color.xyz * _Color.xyz, _Color.a);
 
                         projectionPos = UnityObjectToClipPos(pos);
                         fout.depth = projectionPos.z / projectionPos.w;
