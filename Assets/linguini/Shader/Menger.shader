@@ -6,13 +6,14 @@
         _Color ("Color", Color) = (1,1,1)
         _BackGround ("BackGround", Color) = (0,0,0)
         _Size ("Size", Range(0,1)) = 1
-        _Anim ("Animation", Range(0,1)) = 0
+        _MaxDistance ("MaxDistance", Range(0,1)) = 0.1
     }
     SubShader
     {
         Tags { "LightMode" = "ForwardBase" }
         LOD 100
-        // Cull Front
+        Cull Front
+        ZWrite On
 
         Pass
         {
@@ -25,6 +26,11 @@
             
             #include "UnityCG.cginc"
             #include "Lighting.cginc"
+
+            fixed4 _Color;
+            fixed4 _BackGround;
+            float _Size;
+            float _MaxDistance;
 
             struct appdata
             {
@@ -40,32 +46,23 @@
                 float4 vertex : SV_POSITION;
             };
             
-            struct gbuffer
+            struct fragout
             {
-                // fixed4 color : SV_Target;
-                fixed4 diffuse : SV_Target0; // rgb: diffuse,  a: occlusion
-                fixed4 specular : SV_Target1; // rgb: specular, a: smoothness
-                fixed4 normal : SV_Target2; // rgb: normal,   a: unused
-                fixed4 emission : SV_Target3; // rgb: emission, a: unused
+                fixed4 color : SV_Target;
                 float depth : SV_Depth;
             };
 
             // sampler2D _MainTex;
             // float4 _MainTex_ST;
 
-            fixed4 _Color;
-            fixed4 _BackGround;
-            float _Size;
-            float _Anim;
-
             v2f vert (appdata v)
             {
                 v2f o;
                 o.vertex = UnityObjectToClipPos(v.vertex);
                 // //メッシュのワールド座標を代入
-                o.pos = mul(unity_ObjectToWorld, v.vertex);
+                // o.pos = mul(unity_ObjectToWorld, v.vertex);
                 //メッシュのローカル座標を代入
-                // o.pos = v.vertex;
+                o.pos = v.vertex;
                 o.uv = v.uv;
                 return o;
             }
@@ -73,43 +70,6 @@
             float min3(float x, float y, float z){
                 return min(x, min(y, z));
             }
-
-            float sphereDist(float3 pos){
-                return length(pos) - _Size/2;
-            }
-
-            float cubeDist(float3 pos){
-                float3 q = abs(pos) - _Size/2;
-                return length(max(q, 0)) //+ min(max(q.x, max(q.y, q.z)), 0)
-                ;
-            }
-            
-            float pillarXDist(float3 pos) {
-                float3 q = float3(abs(pos.yz) - _Size/2, -abs(pos.x));
-                return length(max(q,0));
-            }
-            float pillarYDist(float3 pos) {
-                float3 q = float3(abs(pos.zx) - _Size/2, -abs(pos.y));
-                return length(max(q,0));
-            }
-            float pillarZDist(float3 pos) {
-                float3 q = float3(abs(pos.xy) - _Size/2, -abs(pos.z));
-                return length(max(q,0));
-            }
-
-            float pillarXYZDist(float3 pos){
-                return min3(
-                pillarXDist(pos),
-                pillarYDist(pos),
-                pillarZDist(pos)
-                );
-            }
-            
-            float mengerDist(float3 pos){
-                return // max(
-                cubeDist(pos); //, 
-                //- pillarXYZDist(pos * 3) / 3);
-            }            
 
             float3 repeat(float3 pos){
                 return abs(fmod(pos, _Size * 4)) - _Size * 2;
@@ -119,6 +79,188 @@
                 float2x2 m = float2x2(cos(r), sin(r), -sin(r), cos(r));
                 return mul(pos,m);
             }
+
+            float2 rotate90(float2 pos){
+                float2x2 m = float2x2(0,1,-1,0);
+                return mul(m, pos);
+            }
+
+            float2 rotate45(float2 pos){
+                float x = pow(2, 1/2) / 2;
+                float2x2 m = float2x2(x,x,-x,x);
+                return mul(m, pos);
+            }
+
+            
+            float sphereDist(float3 pos){
+                return length(pos) - _Size/2;
+            }
+
+            float cubeDist(float3 pos){
+                float3 q = abs(pos) - _Size/2;
+                return length(max(q, 0)) + min(max(q.x, max(q.y, q.z)), 0);
+            }
+            
+            float pillarXDist(float3 pos) {
+                pos = abs(pos);
+                return max(pos.y, pos.z) - _Size/2;
+            }
+            float pillarYDist(float3 pos) {
+                pos = abs(pos);
+                return max(pos.z, pos.x) - _Size/2;
+            }
+            float pillarZDist(float3 pos) {
+                pos = abs(pos);
+                return max(pos.x, pos.y) - _Size/2;
+            }
+
+            float pillarXYZDist(float3 pos){
+                return min3(
+                pillarXDist(pos),
+                pillarYDist(pos),
+                pillarZDist(pos)
+                );
+            }
+
+            float fillDist(float3 pos) {
+                return 0;
+            }
+            
+            float mengerRec(float3 pos, uint level, uint maxLevel) {
+                float offset = _Size / pow(3, level - 1);
+                float3 pos0 = abs(pos) - float3(0,offset,0);
+                float x0 = pillarXDist(pos0);
+                float3 pos1 = abs(pos) - float3(0,0,offset);
+                float x1 = pillarXDist(pos1);
+                float3 pos2 = abs(pos) - float3(0,offset,offset);
+                float x2 = pillarXDist(pos2);
+                float x = min3(x0, x1, x2);
+                return level < maxLevel ?
+                min(
+                x,
+                min3(
+                mengerRec(pos0, level + 1, maxLevel),
+                mengerRec(pos1, level + 1, maxLevel),
+                mengerRec(pos2, level + 1, maxLevel)
+                )):
+                x
+                ;
+            }
+
+            float mengerTail(
+            float3 centerPos, uint level, uint maxLevel, float accm
+            ) {
+                float offset = _Size / pow(3, level - 1);
+                
+                float3 pos0 = abs(centerPos) - float3(0,0,offset);
+                float x0 = pillarXDist(pos0);
+                
+                return level < maxLevel ?
+                min(x0, accm):
+                accm;
+            }
+
+            // int fib (int num) {
+                //         return num <= 0 ?
+                //         0 :(
+                //             num == 1?
+                //             1:
+                //             fib(num-2) + fib(num-1);
+                //         );
+            // }
+
+            // int factorialTail (int num, int accm0 = 0, int accm1 = 1) {
+                //         return num <= 0 ?
+                //         accm0 :(
+                //             num == 1? 
+                //             accm1:
+                //             accm0 + accm1
+                //         );
+                
+            // }
+
+            float mengerDist(float3 pos){
+                float cube = cubeDist(pos);
+                float offset = _Size;
+                float3 pos0, pos1, po2;
+                float x0, x1, x2;
+                float x;
+                // for (uint i = 0; i < 3; i++){
+                    offset /= 3;
+
+                    // pos.z -= offset/2;
+                    // pos.z = abs(pos.z);
+                    // pos.z += offset/2;
+                    // pos.yz = abs(pos.yz);
+
+                    // pos.z -= offset/2;
+                    // pos.z = abs(pos.z);
+                    // pos.z += offset/2;
+                    // pos.yz -= offset;
+                    pos -= offset*3*round(pos / (offset * 3));
+                    pos *= 9;
+                    // pos.yz = rotate45(pos.yz);
+                    // pos.y -= offset;
+                    // pos.yz = rotate45(pos.yz);
+                // }
+                return cubeDist(pos)/9;
+                return max(cube, -pillarXDist(pos)/9);
+            }
+            
+            // float mengerDist(float3 pos){
+                //     float offset;
+                //     float3 pos0,pos1,pos2;
+                //     float x0,x1,x2;
+                //     float x;
+                //     for(;;){
+                    //         offset = _Size / pow(3, level - 1);
+                    //         pos2 = abs(pos);
+                    //         pos0 = pos2 - float3(0,offset,0);
+                    //         x0 = pillarXDist(pos0);
+                    //         pos1 = pos2 - float3(0,0,offset);
+                    //         x1 = pillarXDist(pos1);
+                    //         pos2 = pos2 - float3(0,offset,offset);
+                    //         x2 = pillarXDist(pos2);
+                    //         x = min3(x0, x1, x2);
+                    //         if (maxLevel < level){
+                        //             return x;
+                    //         }
+                    //         pos = 
+                //     }
+                //     return 0;
+            // }
+
+            // float mengerDist(float3 pos){
+                //     float cube = cubeDist(pos);
+                //     float ret;
+                //     float p0 = pillarXDist(pos * pow(3,1)) / pow(3,1);
+                //     float3 posy = pos;
+                //     float3 posz = pos;
+                //     float offset = _Size;
+                //     int level = 3;
+                //     for (int i = 0; i < 4; i++){
+                    //             level *= 3;
+                    //             offset /= 3;
+                    //             posy = pos;
+                    //             posz = pos;
+                    //             posy -= float3(0,offset,0);
+                    //             posz -= float3(0,0,offset);
+                    //             pos = posy;
+                    //             p0 = min(
+                    //                 //min(
+                    //                     p0,
+                    //                 //    pillarXDist(posx*level)/level
+                    //                 //    ),
+                    //                 min(
+                    //                     pillarXDist(posy*level)/level,
+                    //                     pillarXDist(posz*level)/level
+                    //                     )
+                    //                 );
+                //     }
+                //     // return p0;
+                //     return max(cube,-p0);
+            // }            
+
 
             float sceneDist(float3 pos){
                 return mengerDist(pos);
@@ -134,51 +276,53 @@
                 );
             }
 
-            gbuffer frag (v2f i)
-            {
-                //float3 pos = mul(unity_WorldToObject, _WorldSpaceCameraPos);
-                float3 pos = _WorldSpaceCameraPos;
-                // レイの進行方向
-                float3 rayDir = normalize(i.pos.xyz - pos);
-                
-                float maxDistance = 1000 * _Size;
+            fragout raymarch(float3 pos, float3 rayDir) {
+                float maxDistance = 100 * _Size * _MaxDistance;
                 float minDistance = _Size * 0.001;
                 float marchingDist = sceneDist(pos); 
                 
-                gbuffer fout;
+                fragout fout;
                 
-                // fout.diffuse = fixed4(0.5, 0.5, 0.5, 0.5);
-                fout.specular = fixed4(0, 0, 0, 1);
-                fout.emission = fixed4(1, 1, 1, 1); 
-
                 float3 normal;
                 float3 lightDir;
                 float NdotL;
                 float4 projectionPos;
                 // [unroll]
-                //  for (int i = 0; i < 60; i++) {
+                // for (int i = 0; i < 30; i++) {
                     while (length(pos) < maxDistance) {
                         marchingDist = sceneDist(pos);
-                        if (marchingDist < minDistance) {
+                        if (marchingDist < minDistance && -minDistance < marchingDist) {
                             // 法線
                             normal = getSceneNormal(pos);
-                            fout.normal = float4(-normal, 1);
-                            // lightDir = mul(unity_WorldToObject, _WorldSpaceLightPos0);
-                            lightDir = _WorldSpaceLightPos0;
+                            lightDir = mul(unity_WorldToObject, _WorldSpaceLightPos0);
+                            // lightDir = _WorldSpaceLightPos0;
                             //ランバート反射を計算
-                            NdotL = max(0, dot(normal, lightDir));
-                            fout.diffuse = fixed4(_Color.xyz * NdotL + fixed3(0.1,0.1,0.1), _Color.a);
-
+                            NdotL = dot(normal, lightDir);
+                            fout.color = fixed4(_Color.xyz * NdotL, _Color.a);
+                            //fout.color = _Color;
                             projectionPos = UnityObjectToClipPos(float4(pos, 1.0));
                             fout.depth = projectionPos.z / projectionPos.w;
                             return fout;
                         }
-                        pos.xyz += marchingDist * rayDir.xyz;
+                        pos.xyz += marchingDist * rayDir.xyz;                                
                     }
-                    fout.diffuse = _BackGround;
-                    return fout;
-                }
-                ENDCG
+                    
+                // }
+                discard;
+                fout.color = _BackGround;
+                return fout;
             }
+
+            fragout frag (v2f i)
+            {
+                // float3 pos = mul(unity_WorldToObject,_WorldSpaceCameraPos);
+                float3 pos = mul(unity_WorldToObject, float4(_WorldSpaceCameraPos, 1)).xyz;
+                //float3 pos = _WorldSpaceCameraPos;
+                // レイの進行方向
+                float3 rayDir = normalize(i.pos.xyz - pos);
+                return raymarch(pos, rayDir);
+            }
+            ENDCG
         }
     }
+}

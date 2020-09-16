@@ -6,14 +6,13 @@
         _Color ("Color", Color) = (1,1,1)
         _BackGround ("BackGround", Color) = (0,0,0)
         _Size ("Size", Range(0,1)) = 0.5
-        _Anim ("Animation", Range(0,1)) = 0
         _MaxDistance ("MaxDistance", Range(0,1)) = 1.0
     }
     SubShader
     {
-        Tags { "RenderType" = "Opaque"  "LightMode" = "ForwardBase" }
-        LOD 100
+        Tags { "RenderType" = "Opaque" "LightMode" = "ForwardBase" }
         Cull Front
+        LOD 100
 
         Pass
         {
@@ -54,9 +53,8 @@
 
             fixed4 _Color;
             fixed4 _BackGround;
-            float _Size;
-            float _Anim;
-            float _MaxDistance;
+            uniform float _Size;
+            uniform float _MaxDistance;
 
             v2f vert (appdata v)
             {
@@ -86,7 +84,9 @@
             }
 
             float3 repeat(float3 pos){
-                return abs(fmod(pos, _Size * 4)) - _Size * 2;
+                float size = _Size * 4;
+                pos -= round(pos/size) * size;
+                return pos;
             }
 
             float2 rotate(float2 pos, float r) {
@@ -104,9 +104,9 @@
                 pos.xy = rotate(pos.xy, _Time.y);
                 return cubeDist(pos);
             }
-
+            
+            #define EPS 0.0001
             float3 getSceneNormal(float3 pos){
-                float EPS = 0.0001;
                 return normalize(float3(
                 sceneDist(pos + float3(EPS,0,0)) - sceneDist(pos + float3(-EPS,0,0)),
                 sceneDist(pos + float3(0,EPS,0)) - sceneDist(pos + float3(0,-EPS,0)),
@@ -115,45 +115,55 @@
                 );
             }
 
-            fragout frag (v2f i) : SV_Target
-            {
-                // float3 pos = mul(unity_WorldToObject, _WorldSpaceCameraPos);
-                float3 pos = _WorldSpaceCameraPos;
-                // レイの進行方向
-                float3 rayDir = normalize(i.pos.xyz - pos);
-                
-                float maxDistance = 1000 * _MaxDistance * _Size;
-                float minDistance = _Size * 0.0001;
-                float marchingDist = sceneDist(pos); 
+            #define minDistance 0.0001
+            uniform float maxDistance;
+            
+            fragout raymarch(float3 pos, float3 rayDir) {
+                float marchingDist = sceneDist(pos);
                 
                 fragout fout;
+                
                 float3 normal;
                 float3 lightDir;
                 float NdotL;
                 float4 projectionPos;
-                // [unroll]
-                //  for (int i = 0; i < 60; i++) {
-                    while (length(pos) < maxDistance) {
-                        marchingDist = sceneDist(pos);
-                        if (marchingDist < minDistance) {
-                            // 法線
-                            normal = getSceneNormal(pos);
-                            // lightDir = mul(unity_WorldToObject, _WorldSpaceLightPos0);
-                            lightDir = _WorldSpaceLightPos0;
-                            //ランバート反射を計算
-                            NdotL = max(0, dot(normal, lightDir));
-                            fout.color = fixed4(_Color.xyz * NdotL + fixed3(0.1,0.1,0.1), _Color.a);
+                // [unroll(100)]
+                // for (int i = 0; i < 100; i++) {
+                while (length(pos) < maxDistance) {
+                    marchingDist = sceneDist(pos);
+                    if (marchingDist < minDistance && -minDistance < marchingDist) {
+                        // 法線
+                        normal = getSceneNormal(pos.xyz);
+                        // lightDir = mul(unity_WorldToObject, _WorldSpaceLightPos0);
+                        lightDir = _WorldSpaceLightPos0;
 
-                            projectionPos = UnityObjectToClipPos(float4(pos, 1.0));
-                            fout.depth = projectionPos.z / projectionPos.w;
-                            return fout;
-                        }
-                        pos.xyz += marchingDist * rayDir.xyz;
+                        //ランバート反射を計算
+                        NdotL = max(0, dot(normal, lightDir));
+                        fout.color = fixed4(NdotL * _Color.xyz + fixed3(0.1,0.1,0.1), _Color.a);
+
+                        projectionPos = UnityObjectToClipPos(pos);
+                        fout.depth = projectionPos.z / projectionPos.w;
+                        return fout;
                     }
-                    fout.color = _BackGround;
-                    return fout;
+                    pos.xyz += marchingDist * rayDir.xyz;
                 }
-                ENDCG
+                fout.color = _BackGround;
+                return fout;
             }
+
+            fragout frag (v2f i) : SV_Target
+            {
+                // float3 pos = UnityObjectToViewPos(_WorldSpaceCameraPos);
+                float3 pos = _WorldSpaceCameraPos;
+                // レイの進行方向
+                float3 rayDir = normalize(i.pos.xyz - pos);
+                
+                maxDistance = 1000 * _MaxDistance;
+                // minDistance = _Size * 0.0001;
+
+                return raymarch(pos, rayDir);                
+            }
+            ENDCG
         }
     }
+}
