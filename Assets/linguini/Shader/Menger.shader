@@ -127,39 +127,104 @@
             }
             
             float mengerRec(float3 pos, uint level, uint maxLevel) {
-                float offset = _Size / pow(3, level - 1);
-                float3 pos0 = abs(pos) - float3(0,offset,0);
-                float x0 = pillarXDist(pos0);
-                float3 pos1 = abs(pos) - float3(0,0,offset);
-                float x1 = pillarXDist(pos1);
-                float3 pos2 = abs(pos) - float3(0,offset,offset);
-                float x2 = pillarXDist(pos2);
-                float x = min3(x0, x1, x2);
+                float size = _Size/pow(3,level);
+                float offset = _Size/pow(3, level - 1);
+                
+                pos.yz = abs(pos.yz);
+
+                pos.yz -= offset/2;
+                pos.yz = abs(pos.yz);
+                pos.yz += offset/2;
+
+                pos.yz -= offset;
+
+                float x = pillarXDist(pos*size)/size;
                 return level < maxLevel ?
                 min(
                 x,
-                min3(
-                mengerRec(pos0, level + 1, maxLevel),
-                mengerRec(pos1, level + 1, maxLevel),
-                mengerRec(pos2, level + 1, maxLevel)
-                )):
+                mengerRec(pos, level + 1, maxLevel)
+                ):
                 x
                 ;
             }
 
-            float mengerTail(
-            float3 centerPos, uint level, uint maxLevel, float accm
-            ) {
-                float offset = _Size / pow(3, level - 1);
+            float mengerTail(float3 pos, uint level, uint maxLevel, float accm) {
+                float size = _Size/pow(3,level);
+                float offset = _Size/pow(3, level - 1);
+
+                pos.yz = abs(pos.yz);
+
+                pos.yz -= offset/2;
+                pos.yz = abs(pos.yz);
+                pos.yz += offset/2;
+
+                pos.yz -= offset;
                 
-                float3 pos0 = abs(centerPos) - float3(0,0,offset);
-                float x0 = pillarXDist(pos0);
-                
+                float dist = min(accm, pillarXDist(pos));
+
                 return level < maxLevel ?
-                min(x0, accm):
-                accm;
+                mengerTail(pos, level++, maxLevel, dist):
+                dist;
             }
 
+            
+
+            float3 mengerizeXPos(float3 pos, float offset) {
+                pos.yz = abs(pos.yz);
+
+                pos.yz -= offset/2;
+                pos.yz = abs(pos.yz);
+                pos.yz += offset/2;
+
+                pos.yz -= offset;
+                return pos;
+            }
+            float3 mengerizeYPos(float3 pos, float offset) {
+                pos.zx = abs(pos.zx);
+
+                pos.zx -= offset/2;
+                pos.zx = abs(pos.zx);
+                pos.zx += offset/2;
+
+                pos.zx -= offset;
+                return pos;
+            }
+            float3 mengerizeZPos(float3 pos, float offset) {
+                pos.xy = abs(pos.xy);
+
+                pos.xy -= offset/2;
+                pos.xy = abs(pos.xy);
+                pos.xy += offset/2;
+
+                pos.xy -= offset;
+                return pos;
+            }
+
+
+            float mengerDist(float3 pos) {
+                float cube = cubeDist(pos);
+                uint size = 3;
+                float offset = _Size;
+                float dist = pillarZDist(pos*size)/size;
+                float3 posX = pos, posY = pos, posZ = pos;
+
+                for (uint level = 0; level < 3; level++){
+                    size *= 3;
+                    offset /= 3;
+                    posX = mengerizeXPos(posX, offset);
+                    posY = mengerizeYPos(posY, offset);
+                    posZ = mengerizeZPos(posZ, offset);
+                    dist = min(dist, min3(
+                    pillarXDist(posX*size)/size,
+                    pillarYDist(posY*size)/size,
+                    pillarZDist(posZ*size)/size
+                    ));
+                }
+                //return dist;
+                return max(cube, -dist);
+                // return max(cube, -pillarXDist(pos)/9);
+            }
+            
             // int fib (int num) {
                 //         return num <= 0 ?
                 //         0 :(
@@ -169,43 +234,15 @@
                 //         );
             // }
 
-            // int factorialTail (int num, int accm0 = 0, int accm1 = 1) {
-                //         return num <= 0 ?
-                //         accm0 :(
-                //             num == 1? 
-                //             accm1:
-                //             accm0 + accm1
-                //         );
-                
+            // int fibTail (int num, int accm0 = 0, int accm1 = 1) {
+                //     return num <= 0 ?
+                //     accm0 :(
+                //     num == 1? 
+                //     accm1:
+                //     fibTail(num--, accm1, accm0 + accm1)
+                //     );
             // }
 
-            float mengerDist(float3 pos){
-                float cube = cubeDist(pos);
-                float offset = _Size;
-                float3 pos0, pos1, po2;
-                float x0, x1, x2;
-                float x;
-                // for (uint i = 0; i < 3; i++){
-                    offset /= 3;
-
-                    // pos.z -= offset/2;
-                    // pos.z = abs(pos.z);
-                    // pos.z += offset/2;
-                    // pos.yz = abs(pos.yz);
-
-                    // pos.z -= offset/2;
-                    // pos.z = abs(pos.z);
-                    // pos.z += offset/2;
-                    // pos.yz -= offset;
-                    pos -= offset*3*round(pos / (offset * 3));
-                    pos *= 9;
-                    // pos.yz = rotate45(pos.yz);
-                    // pos.y -= offset;
-                    // pos.yz = rotate45(pos.yz);
-                // }
-                return cubeDist(pos)/9;
-                return max(cube, -pillarXDist(pos)/9);
-            }
             
             // float mengerDist(float3 pos){
                 //     float offset;
