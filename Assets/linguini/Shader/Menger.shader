@@ -219,19 +219,39 @@
                 float3 normal;
                 float3 lightDir;
                 float NdotL;
+                fixed3 lightColor, lightProbe, lighting, ambient;
                 float4 projectionPos;
                 // [unroll]
                 // for (int i = 0; i < 30; i++) {
                     while (length(pos) < maxDistance) {
                         marchingDist = sceneDist(pos);
                         if (marchingDist < minDistance && -minDistance < marchingDist) {
+                            //ランバート反射を計算
                             // 法線
                             normal = getSceneNormal(pos);
-                            lightDir = mul(unity_WorldToObject, _WorldSpaceLightPos0 != float4(0,0,0,0) ? _WorldSpaceLightPos0 : float4(1,1,1,0));
-                            // lightDir = _WorldSpaceLightPos0;
-                            //ランバート反射を計算
-                            NdotL = clamp(dot(normal, lightDir), 0.1, 1);
-                            fout.color = fixed4(NdotL * (_LightColor0 != fixed3(0,0,0) ? _LightColor0 : fixed3(1,1,1)) * _Color.xyz, _Color.a);
+                            //ローカル座標で計算しているので、ディレクショナルライトの角度もローカル座標にする
+                            lightDir = mul(unity_WorldToObject, _WorldSpaceLightPos0).xyz;
+
+                            // lightDir = normalize(mul(unity_WorldToObject,_WorldSpaceLightPos0)).xyz;
+                            NdotL = saturate(dot(normal, lightDir));
+
+                            lightProbe = ShadeSH9(fixed4(UnityObjectToWorldNormal(normal), 1));
+
+                            lighting = lerp(lightProbe, _LightColor0, NdotL);
+                            
+                            ambient = Shade4PointLights(
+                            unity_4LightPosX0, 
+                            unity_4LightPosY0, 
+                            unity_4LightPosZ0,
+                            unity_LightColor[0].rgb, 
+                            unity_LightColor[1].rgb, 
+                            unity_LightColor[2].rgb, 
+                            unity_LightColor[3].rgb,
+                            unity_4LightAtten0, 
+                            pos, 
+                            normal);
+                            
+                            fout.color = fixed4(lighting * _Color + ambient, _Color.a);
                             //fout.color = _Color;
                             projectionPos = UnityObjectToClipPos(float4(pos, 1.0));
                             fout.depth = projectionPos.z / projectionPos.w;

@@ -155,7 +155,7 @@
                 clip(col.a - _Cutoff);
                 return o;
             }
-
+            
             float localLength(float3 pos) {
                 pos = mul(unity_WorldToObject, float4(pos, 1)).xyz;
                 return length(pos);
@@ -165,10 +165,10 @@
             uniform float maxDistance;
             
             fixed4 raymarch(float3 pos, float3 rayDir, fixed4 col) {
-                float NdotL;
                 float3 normal;
                 float3 lightDir;
-                fixed3 lightColor, lambert, lightProbe, ambient;
+                float NdotL;
+                fixed3 lightProbe, lighting, ambient;
                 float4 projectionPos;
                 float marchingDist; 
                 while (localLength(pos) < maxDistance) {
@@ -178,16 +178,14 @@
                         // 法線
                         normal = getSceneNormal(pos);
                         //ローカル座標で計算しているので、ディレクショナルライトの角度もローカル座標にする
-                        lightDir = 
-                        mul(unity_WorldToObject, _WorldSpaceLightPos0).xyz
-                        ;
+                        lightDir = mul(unity_WorldToObject, _WorldSpaceLightPos0).xyz;
 
                         // lightDir = normalize(mul(unity_WorldToObject,_WorldSpaceLightPos0)).xyz;
-                        lightColor = _LightColor0? _LightColor0: 1;
                         NdotL = saturate(dot(normal, lightDir));
-                        lambert = NdotL * lightColor;
 
                         lightProbe = ShadeSH9(fixed4(UnityObjectToWorldNormal(normal), 1));
+
+                        lighting = lerp(lightProbe, 1, NdotL);
                         
                         ambient = Shade4PointLights(
                         unity_4LightPosX0, 
@@ -201,7 +199,7 @@
                         pos, 
                         normal);
 
-                        return fixed4(lerp(lightProbe, lambert, NdotL) * col + ambient, col.a);
+                        return fixed4(lighting * col + ambient, col.a);
                     }
                     pos.xyz += marchingDist * rayDir.xyz;
                 }
