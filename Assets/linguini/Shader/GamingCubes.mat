@@ -33,7 +33,8 @@ Material:
     - _FreqG: 1
     - _FreqR: 1
     - _Green: 1
-    - _MaxDistance: 0.22
+    - _MaxDistance: 0.033
+    - _NdotL: 1
     - _RGBIntensity: 1
     - _Red: 1
     - _Scale: 1

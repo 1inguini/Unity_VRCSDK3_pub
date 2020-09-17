@@ -22,7 +22,7 @@
     }
     SubShader
     {
-        Tags { "RenderType" = "Opaque"  "LightMode" = "ForwardBase" }
+        Tags { "LightMode" = "ForwardBase" }
         LOD 100
         Cull Off
 
@@ -136,12 +136,11 @@
             
             fixed4 gaming (v2f i)
             {   
-                float PI = 3.14159265;
                 float xy = (i.uv.x + i.uv.y) * _Scale;
                 fixed3 gaming_col = fixed3(
                 _Red * (sin(_FreqR * (_Time.y + xy) / _Cycle) + 1) / 2,
-                _Green * (sin(_FreqG * (_Time.y + xy) / _Cycle + PI * 2 / 3) + 1) / 2,
-                _Blue * (sin(_FreqB * (_Time.y + xy) / _Cycle + PI * 4 / 3) + 1) / 2
+                _Green * (sin(_FreqG * (_Time.y + xy) / _Cycle + UNITY_PI * 2 / 3) + 1) / 2,
+                _Blue * (sin(_FreqB * (_Time.y + xy) / _Cycle + UNITY_PI * 4 / 3) + 1) / 2
                 );
                 fixed4 col = tex2D(_MainTex, i.uv);
                 fixed ave = (col.x + col.y + col.z) / 3;
@@ -169,19 +168,40 @@
                 float NdotL;
                 float3 normal;
                 float3 lightDir;
+                fixed3 lightColor, lambert, lightProbe, ambient;
                 float4 projectionPos;
                 float marchingDist; 
                 while (localLength(pos) < maxDistance) {
                     marchingDist = sceneDist(pos);
                     if (marchingDist < minDistance && -minDistance < marchingDist) {
+                        //ランバート反射を計算
                         // 法線
                         normal = getSceneNormal(pos);
                         //ローカル座標で計算しているので、ディレクショナルライトの角度もローカル座標にする
-                        lightDir = normalize(mul(unity_WorldToObject, _WorldSpaceLightPos0? _WorldSpaceLightPos0: 1));
+                        lightDir = 
+                        mul(unity_WorldToObject, _WorldSpaceLightPos0).xyz
+                        ;
+
                         // lightDir = normalize(mul(unity_WorldToObject,_WorldSpaceLightPos0)).xyz;
-                        //ランバート反射を計算
-                        NdotL = clamp(dot(normal, lightDir), 0.1, 1);
-                        return fixed4((col.xyz * NdotL), col.a);
+                        lightColor = _LightColor0? _LightColor0: 1;
+                        NdotL = saturate(dot(normal, lightDir));
+                        lambert = NdotL * lightColor;
+
+                        lightProbe = ShadeSH9(fixed4(UnityObjectToWorldNormal(normal), 1));
+                        
+                        ambient = Shade4PointLights(
+                        unity_4LightPosX0, 
+                        unity_4LightPosY0, 
+                        unity_4LightPosZ0,
+                        unity_LightColor[0].rgb, 
+                        unity_LightColor[1].rgb, 
+                        unity_LightColor[2].rgb, 
+                        unity_LightColor[3].rgb,
+                        unity_4LightAtten0, 
+                        pos, 
+                        normal);
+
+                        return fixed4(lerp(lightProbe, lambert, NdotL) * col + ambient, col.a);
                     }
                     pos.xyz += marchingDist * rayDir.xyz;
                 }
@@ -204,5 +224,7 @@
             }
             ENDCG
         }
+        // pull in shadow caster from VertexLit built-in shader
+        UsePass "Legacy Shaders/VertexLit/SHADOWCASTER"
     }
 }

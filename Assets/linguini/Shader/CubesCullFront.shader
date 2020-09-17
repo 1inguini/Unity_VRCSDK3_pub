@@ -123,59 +123,78 @@
             #define minDistance 0.0001
             uniform float maxDistance;
             
-            fragout raymarch(float3 pos, float3 rayDir) {
+            fragout raymarch(float3 pos, float3 rayDir, v2f i) {
                 fragout fout;
                 
                 float NdotL;
                 float3 normal;
                 float3 lightDir;
-                float3 lightColor;
+                float lambert;
+                fixed3 lightProbe, ambient;
+                fixed3 lighting;
                 float4 projectionPos;
-                
+
                 float marchingDist = sceneDist(pos);
                 // [unroll(100)]
                 // for (int i = 0; i < 100; i++) {
-                for (pos; localLength(pos) < maxDistance; pos.xyz += abs(marchingDist)*rayDir.xyz) {
-                    marchingDist = sceneDist(pos);
-                    if (marchingDist < minDistance && -minDistance < marchingDist) {
-                        // lightDir = mul(unity_WorldToObject, _WorldSpaceLightPos0);
-                        //ランバート反射を計算
-                        // // 法線
-                        normal = getSceneNormal(pos.xyz);
-                        lightDir = normalize(_WorldSpaceLightPos0? _WorldSpaceLightPos0: 1);
-                        NdotL = clamp(dot(normal, lightDir), 0.1, 1);
-                        
-                        lightColor = _LightColor0? _LightColor0: 1;
-                        
-                        fout.color = fixed4(NdotL * lightColor * _Color.xyz, _Color.a);
+                    for (pos; localLength(pos) < maxDistance; pos.xyz += abs(marchingDist)*rayDir.xyz) {
+                        marchingDist = sceneDist(pos);
+                        if (marchingDist < minDistance && -minDistance < marchingDist) {
+                            // lightDir = mul(unity_WorldToObject, _WorldSpaceLightPos0);
+                            //ランバート反射を計算
+                            // // 法線
+                            normal = getSceneNormal(pos.xyz);
 
-                        // fout.color = fixed4(clamp(normal, 0.1, 1),1);
+                            lightDir = _WorldSpaceLightPos0;
+                            NdotL = max(dot(normal, lightDir), 0);
+                            lambert = _LightColor0 * NdotL;
+                            
+                            // ライトプローブ
+                            lightProbe = ShadeSH9(fixed4(UnityObjectToWorldNormal(normal), 1));
 
-                        // デプス
-                        projectionPos = UnityWorldToClipPos(pos);
-                        fout.depth = projectionPos.z / projectionPos.w;
-                        
-                        return fout;
+                            lighting = lerp(lightProbe, _LightColor0, NdotL);
+
+                            ambient = Shade4PointLights(
+                            unity_4LightPosX0, 
+                            unity_4LightPosY0, 
+                            unity_4LightPosZ0,
+                            unity_LightColor[0].rgb, 
+                            unity_LightColor[1].rgb, 
+                            unity_LightColor[2].rgb, 
+                            unity_LightColor[3].rgb,
+                            unity_4LightAtten0, 
+                            pos, 
+                            normal);
+
+                            fout.color = fixed4(lighting * _Color.xyz + ambient, _Color.a);
+
+                            // fout.color = fixed4(clamp(normal, 0.1, 1),1);
+
+                            // デプス
+                            projectionPos = UnityWorldToClipPos(pos);
+                            fout.depth = projectionPos.z / projectionPos.w;
+                            
+                            return fout;
+                        }
+                        //pos.xyz += abs(marchingDist) * rayDir.xyz;
                     }
-                    //pos.xyz += abs(marchingDist) * rayDir.xyz;
+                    fout.color = _BackGround;
+                    return fout;
                 }
-                fout.color = _BackGround;
-                return fout;
-            }
 
-            fragout frag (v2f i) : SV_Target
-            {
-                maxDistance = 1000 * _MaxDistance;
-                // minDistance = _Size * 0.0001;
+                fragout frag (v2f i) : SV_Target
+                {
+                    maxDistance = 1000 * _MaxDistance;
+                    // minDistance = _Size * 0.0001;
 
-                // float3 pos = mul(unity_WorldToObject, float4(_WorldSpaceCameraPos, 1)).xyz;
-                float3 pos = _WorldSpaceCameraPos;
-                // レイの進行方向
-                float3 rayDir = normalize(i.pos.xyz - pos);
-                
-                return raymarch(pos, rayDir);                
+                    // float3 pos = mul(unity_WorldToObject, float4(_WorldSpaceCameraPos, 1)).xyz;
+                    float3 pos = _WorldSpaceCameraPos;
+                    // レイの進行方向
+                    float3 rayDir = normalize(i.pos.xyz - pos);
+                    
+                    return raymarch(pos, rayDir, i);                
+                }
+                ENDCG
             }
-            ENDCG
         }
     }
-}
