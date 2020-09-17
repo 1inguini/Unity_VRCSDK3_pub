@@ -103,8 +103,8 @@
             }
 
             float3 repeat(float3 pos){
-                float size = _Size * 4;
-                pos -= round(pos/ size) * _Size;
+                float size = _Size * 6;
+                pos -= round(pos/ size) * size;
                 return pos;
             }
 
@@ -157,25 +157,31 @@
                 return o;
             }
 
+            float localLength(float3 pos) {
+                pos = mul(unity_WorldToObject, float4(pos, 1)).xyz;
+                return length(pos);
+            }
 
+            #define minDistance 0.0001
+            uniform float maxDistance;
+            
             fixed4 raymarch(float3 pos, float3 rayDir, fixed4 col) {
+                float NdotL;
                 float3 normal;
                 float3 lightDir;
-                float NdotL;
                 float4 projectionPos;
-                float maxDistance = 1000 * _MaxDistance * _Size;
-                float minDistance = _Size * 0.001;
                 float marchingDist; 
-                while (length(pos) < maxDistance) {
+                while (localLength(pos) < maxDistance) {
                     marchingDist = sceneDist(pos);
                     if (marchingDist < minDistance && -minDistance < marchingDist) {
                         // 法線
                         normal = getSceneNormal(pos);
                         //ローカル座標で計算しているので、ディレクショナルライトの角度もローカル座標にする
-                        lightDir = normalize(mul(unity_WorldToObject,_WorldSpaceLightPos0)).xyz;
+                        lightDir = normalize(mul(unity_WorldToObject, _WorldSpaceLightPos0? _WorldSpaceLightPos0: 1));
+                        // lightDir = normalize(mul(unity_WorldToObject,_WorldSpaceLightPos0)).xyz;
                         //ランバート反射を計算
-                        NdotL = max(0, dot(normal, lightDir));
-                        return fixed4(col.xyz * NdotL + fixed3(0.1,0.1,0.1), col.a);
+                        NdotL = clamp(dot(normal, lightDir), 0.1, 1);
+                        return fixed4((col.xyz * NdotL), col.a);
                     }
                     pos.xyz += marchingDist * rayDir.xyz;
                 }
@@ -184,20 +190,15 @@
 
             fixed4 frag (v2f i) : SV_Target
             {
-                //     // sample the texture
-                //     fixed4 col = tex2D(_MainTex, i.uv);
-                //     // apply fog
-                //     UNITY_APPLY_FOG(i.fogCoord, col);
-                //     return col;
-                
+                maxDistance = 1000 * _MaxDistance;
+
                 // レイの初期位置(ピクセルのローカル座標)
                 // float3 pos = mul(unity_WorldToObject,_WorldSpaceCameraPos);
                 float3 pos = _WorldSpaceCameraPos;
-                // レイの進行方向
-                
+                // レイの進行方向                
                 float3 rayDir = normalize(i.pos.xyz - pos);
+                
                 fixed4 col = gaming(i);
-                // = sceneDist(pos);
 
                 return raymarch(pos, rayDir, col);
             }

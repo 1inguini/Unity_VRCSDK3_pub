@@ -227,11 +227,11 @@
                         if (marchingDist < minDistance && -minDistance < marchingDist) {
                             // 法線
                             normal = getSceneNormal(pos);
-                            lightDir = mul(unity_WorldToObject, _WorldSpaceLightPos0);
+                            lightDir = mul(unity_WorldToObject, _WorldSpaceLightPos0 != float4(0,0,0,0) ? _WorldSpaceLightPos0 : float4(1,1,1,0));
                             // lightDir = _WorldSpaceLightPos0;
                             //ランバート反射を計算
                             NdotL = clamp(dot(normal, lightDir), 0.1, 1);
-                            fout.color = fixed4(NdotL * _LightColor0 * _Color.xyz, _Color.a);
+                            fout.color = fixed4(NdotL * (_LightColor0 != fixed3(0,0,0) ? _LightColor0 : fixed3(1,1,1)) * _Color.xyz, _Color.a);
                             //fout.color = _Color;
                             projectionPos = UnityObjectToClipPos(float4(pos, 1.0));
                             fout.depth = projectionPos.z / projectionPos.w;
