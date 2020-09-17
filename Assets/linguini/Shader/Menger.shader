@@ -277,5 +277,7 @@
             }
             ENDCG
         }
+        // pull in shadow caster from VertexLit built-in shader
+        UsePass "Legacy Shaders/VertexLit/SHADOWCASTER"
     }
 }
