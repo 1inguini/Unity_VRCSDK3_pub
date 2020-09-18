@@ -11,13 +11,13 @@
     }
     SubShader
     {
-        Tags { "LightMode" = "ForwardBase" }
-        LOD 100
-        Cull Front
-        ZWrite On
-
         Pass
         {
+            Tags { "LightMode" = "ForwardBase" }
+            LOD 100
+            Cull Front
+            ZWrite On
+
             //アルファ値が機能するために必要
             Blend SrcAlpha OneMinusSrcAlpha
 
@@ -210,7 +210,7 @@
             }
 
             fragout raymarch(float3 pos, float3 rayDir) {
-                float maxDistance = 100 * _Size * _MaxDistance;
+                float maxDistance = 1000 * _Size * _MaxDistance;
                 float minDistance = 0.0001;
                 float marchingDist = sceneDist(pos); 
                 
@@ -251,8 +251,9 @@
                             pos, 
                             normal);
                             
-                            fout.color = fixed4(lighting * _Color + ambient, _Color.a);
+                            fout.color = fixed4(lighting * _Color.rgb + (ambient? ambient: 0.1), _Color.a);
                             //fout.color = _Color;
+
                             projectionPos = UnityObjectToClipPos(float4(pos, 1.0));
                             fout.depth = projectionPos.z / projectionPos.w;
                             return fout;
@@ -278,6 +279,36 @@
             ENDCG
         }
         // pull in shadow caster from VertexLit built-in shader
-        UsePass "Legacy Shaders/VertexLit/SHADOWCASTER"
+        // UsePass "Legacy Shaders/VertexLit/SHADOWCASTER"
+        Pass
+        {
+            Tags{ "LightMode"="ShadowCaster" }
+
+            CGPROGRAM
+            #pragma vertex vert
+            #pragma fragment frag
+            
+            #pragma multi_compile_shadowcaster
+
+            #include "UnityCG.cginc"
+
+            struct v2f
+            {
+                V2F_SHADOW_CASTER;
+            };
+
+            v2f vert (appdata_base v)
+            {
+                v2f o;
+                TRANSFER_SHADOW_CASTER_NORMALOFFSET(o)
+                return o;
+            }
+
+            fixed4 frag (v2f i) : SV_Target
+            {
+                SHADOW_CASTER_FRAGMENT(i)
+            }
+            ENDCG
+        }
     }
 }

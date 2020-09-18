@@ -22,12 +22,13 @@
     }
     SubShader
     {
-        Tags { "LightMode" = "ForwardBase" }
-        LOD 100
-        Cull Off
 
         Pass
         {
+            Tags { "LightMode" = "ForwardBase" }
+            LOD 100
+            Cull Off
+
             //アルファ値が機能するために必要
             Blend SrcAlpha OneMinusSrcAlpha
 
@@ -199,7 +200,7 @@
                         pos, 
                         normal);
 
-                        return fixed4(lighting * col + ambient, col.a);
+                        return fixed4(lighting * col.rgb +  (ambient? ambient: 0.1), col.a);
                     }
                     pos.xyz += marchingDist * rayDir.xyz;
                 }
@@ -223,6 +224,34 @@
             ENDCG
         }
         // pull in shadow caster from VertexLit built-in shader
-        UsePass "Legacy Shaders/VertexLit/SHADOWCASTER"
+        // UsePass "Legacy Shaders/VertexLit/SHADOWCASTER"
+        Pass{
+            Name "ShadowCaster"
+            Tags { "LightMode" = "ShadowCaster" }
+            CGPROGRAM
+            #pragma vertex vert
+            #pragma fragment frag
+
+            #pragma multi_compile_shadowcaster
+            
+            #include "UnityCG.cginc"
+
+            struct v2f
+            {
+                V2F_SHADOW_CASTER;
+            };
+
+            v2f vert (appdata_base v)
+            {
+                v2f o;
+                TRANSFER_SHADOW_CASTER_NORMALOFFSET(o)
+                return o;
+            }
+
+            fixed4 frag (v2f i) : SV_TARGET {
+                SHADOW_CASTER_FRAGMENT(i)
+            }
+            ENDCG
+        }
     }
 }
