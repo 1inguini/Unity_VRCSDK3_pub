@@ -118,52 +118,48 @@ fragout raymarch(float3 pos, float3 rayDir) {
     float NdotL;
     fixed3 lightColor, lightProbe, lighting, ambient;
     float4 projectionPos;
-    // [unroll]
-    // for (int i = 0; i < 30; i++) {
-        while (length(pos) < maxDistance && minDistance <= abs(marchingDist)) {
-            marchingDist = sceneDist(pos);
-            pos.xyz += marchingDist * rayDir.xyz;                                
-        }
-        
-        if (abs(marchingDist) < minDistance) {
-            //ランバート反射を計算
-            // 法線
-            normal = getSceneNormal(pos);
-            //ローカル座標で計算しているので、ディレクショナルライトの角度もローカル座標にする
-            lightDir = mul(unity_WorldToObject, _WorldSpaceLightPos0).xyz;
+    while (length(pos) < maxDistance && minDistance <= abs(marchingDist)) {
+        marchingDist = sceneDist(pos);
+        pos.xyz += marchingDist * rayDir.xyz;                                
+    }
+    
+    // 物体の近くにいなければ描画しない
+    clip(minDistance - abs(marchingDist));
+    
+    //ランバート反射を計算
+    // 法線
+    normal = getSceneNormal(pos);
+    //ローカル座標で計算しているので、ディレクショナルライトの角度もローカル座標にする
+    lightDir = mul(unity_WorldToObject, _WorldSpaceLightPos0).xyz;
 
-            // lightDir = normalize(mul(unity_WorldToObject,_WorldSpaceLightPos0)).xyz;
-            NdotL = saturate(dot(normal, lightDir));
+    // lightDir = normalize(mul(unity_WorldToObject,_WorldSpaceLightPos0)).xyz;
+    NdotL = saturate(dot(normal, lightDir));
 
-            lightProbe = ShadeSH9(fixed4(UnityObjectToWorldNormal(normal), 1));
+    lightProbe = ShadeSH9(fixed4(UnityObjectToWorldNormal(normal), 1));
 
-            lighting = lerp(lightProbe, _LightColor0, NdotL);
-            
-            ambient = Shade4PointLights(
-            unity_4LightPosX0, 
-            unity_4LightPosY0, 
-            unity_4LightPosZ0,
-            unity_LightColor[0].rgb, 
-            unity_LightColor[1].rgb, 
-            unity_LightColor[2].rgb, 
-            unity_LightColor[3].rgb,
-            unity_4LightAtten0, 
-            pos, 
-            normal);
-            
-            fout.color = fixed4(lighting * _Color.rgb + (ambient? ambient: 0.1), _Color.a);
-            //fout.color = _Color;
+    lighting = lerp(lightProbe, _LightColor0, NdotL);
+    
+    ambient = Shade4PointLights(
+    unity_4LightPosX0, 
+    unity_4LightPosY0, 
+    unity_4LightPosZ0,
+    unity_LightColor[0].rgb, 
+    unity_LightColor[1].rgb, 
+    unity_LightColor[2].rgb, 
+    unity_LightColor[3].rgb,
+    unity_4LightAtten0, 
+    pos, 
+    normal);
+    
+    fout.color = fixed4(lighting * _Color.rgb + (ambient? ambient: 0.1), _Color.a);
+    //fout.color = _Color;
 
-            projectionPos = UnityObjectToClipPos(float4(pos, 1.0));
-            fout.depth = projectionPos.z / projectionPos.w;
-            return fout;
-        }
-        
-    // }
-    discard;
-    fout.color = _BackGround;
-    fout.depth = 0;
+    projectionPos = UnityObjectToClipPos(float4(pos, 1.0));
+    fout.depth = projectionPos.z / projectionPos.w;
     return fout;
+    // fout.color = _BackGround;
+    // fout.depth = 0;
+    // return fout;
 }
 
 fragout frag (v2f i)
