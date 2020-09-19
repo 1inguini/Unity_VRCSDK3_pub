@@ -29,6 +29,7 @@
             #include "UnityCG.cginc"
             #include "Lighting.cginc"
             
+            #define OBJECT
             float sceneDist(float3 pos);
             #include "Raymarching.cginc"
             
