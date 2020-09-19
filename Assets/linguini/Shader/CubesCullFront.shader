@@ -146,7 +146,7 @@
                             normal = getSceneNormal(pos.xyz);
 
                             lightDir = _WorldSpaceLightPos0;
-                            NdotL = max(dot(normal, lightDir), 0);
+                            NdotL = saturate(dot(normal, lightDir));
                             lambert = _LightColor0 * NdotL;
                             
                             // ライトプローブ
@@ -166,7 +166,7 @@
                             pos, 
                             normal);
 
-                            fout.color = fixed4(lighting * _Color.xyz + ambient, _Color.a);
+                            fout.color = fixed4(lighting * _Color.xyz + (ambient? ambient: 0.1), _Color.a);
 
                             // fout.color = fixed4(clamp(normal, 0.1, 1),1);
 

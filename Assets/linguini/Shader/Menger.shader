@@ -7,7 +7,7 @@
         _BackGround ("BackGround", Color) = (0,0,0)
         _Size ("Size", Range(0,1)) = 1
         _MaxDistance ("MaxDistance", Range(0,1)) = 0.1
-        _MengerLevel ("MengerLevel", Range(0,1)) = 0.3
+        _Resolution ("Resolution", Range(0,1)) = 0.3
     }
     SubShader
     {
@@ -27,105 +27,9 @@
             
             #include "UnityCG.cginc"
             #include "Lighting.cginc"
-
-            fixed4 _Color;
-            fixed4 _BackGround;
-            float _Size;
-            float _MaxDistance;
-            float _MengerLevel;
-
-            struct appdata
-            {
-                float4 vertex : POSITION;
-                float2 uv : TEXCOORD0;
-            };
-
-            struct v2f
-            {
-                float2 uv : TEXCOORD0;
-                // UNITY_FOG_COORDS(1)
-                float4 pos : POSITION1;
-                float4 vertex : SV_POSITION;
-            };
             
-            struct fragout
-            {
-                fixed4 color : SV_Target;
-                float depth : SV_Depth;
-            };
-
-            // sampler2D _MainTex;
-            // float4 _MainTex_ST;
-
-            v2f vert (appdata v)
-            {
-                v2f o;
-                o.vertex = UnityObjectToClipPos(v.vertex);
-                // //メッシュのワールド座標を代入
-                // o.pos = mul(unity_ObjectToWorld, v.vertex);
-                //メッシュのローカル座標を代入
-                o.pos = v.vertex;
-                o.uv = v.uv;
-                return o;
-            }
-
-            float min3(float x, float y, float z){
-                return min(x, min(y, z));
-            }
-
-            
-            float3 repeat(float3 pos){
-                float size = _Size * 4;
-                pos -= round(pos/ size) * _Size;
-                return pos;
-            }
-
-            float2 rotate(float2 pos, float r) {
-                float2x2 m = float2x2(cos(r), sin(r), -sin(r), cos(r));
-                return mul(pos,m);
-            }
-
-            float2 rotate90(float2 pos){
-                float2x2 m = float2x2(0,1,-1,0);
-                return mul(m, pos);
-            }
-
-            float2 rotate45(float2 pos){
-                float x = pow(2, 1/2) / 2;
-                float2x2 m = float2x2(x,x,-x,x);
-                return mul(m, pos);
-            }
-
-            
-            float sphereDist(float3 pos){
-                return length(pos) - _Size/2;
-            }
-
-            float cubeDist(float3 pos){
-                float3 q = abs(pos) - _Size/2;
-                return length(max(q, 0)) + min(max(q.x, max(q.y, q.z)), 0);
-            }
-            
-            float pillarXDist(float3 pos) {
-                pos = abs(pos);
-                return max(pos.y, pos.z) - _Size/2;
-            }
-            float pillarYDist(float3 pos) {
-                pos = abs(pos);
-                return max(pos.z, pos.x) - _Size/2;
-            }
-            float pillarZDist(float3 pos) {
-                pos = abs(pos);
-                return max(pos.x, pos.y) - _Size/2;
-            }
-
-            float pillarXYZDist(float3 pos){
-                return min3(
-                pillarXDist(pos),
-                pillarYDist(pos),
-                pillarZDist(pos)
-                );
-            }
+            float sceneDist(float3 pos);
+            #include "Raymarching.cginc"
             
             float3 mengerizeXPos(float3 pos, float offset) {
                 pos.yz = abs(pos.yz);
@@ -170,9 +74,9 @@
 
             float mengerDist(float3 pos) {
                 float cube = cubeDist(pos);
-                uint maxLevel = _MengerLevel * 10;
+                uint maxLevel = _Resolution * 10;
                 uint size = 3;
-                float offset = _Size;
+                float offset = 1;
                 float dist = pillarXYZDist(pos*size)/size;
                 float3 posX = pos, posY = pos, posZ = pos;
 
@@ -199,87 +103,145 @@
                 return mengerDist(pos);
             }
 
-            float3 getSceneNormal(float3 pos){
-                float EPS = 0.0001;
-                return normalize(float3(
-                sceneDist(pos + float3(EPS,0,0)) - sceneDist(pos + float3(-EPS,0,0)),
-                sceneDist(pos + float3(0,EPS,0)) - sceneDist(pos + float3(0,-EPS,0)),
-                sceneDist(pos + float3(0,0,EPS)) - sceneDist(pos + float3(0,0,-EPS))
-                )
-                );
-            }
-
-            fragout raymarch(float3 pos, float3 rayDir) {
-                float maxDistance = 1000 * _Size * _MaxDistance;
-                float minDistance = 0.0001;
-                float marchingDist = sceneDist(pos); 
-                
-                fragout fout;
-                
-                float3 normal;
-                float3 lightDir;
-                float NdotL;
-                fixed3 lightColor, lightProbe, lighting, ambient;
-                float4 projectionPos;
-                // [unroll]
-                // for (int i = 0; i < 30; i++) {
-                    while (length(pos) < maxDistance) {
-                        marchingDist = sceneDist(pos);
-                        if (marchingDist < minDistance && -minDistance < marchingDist) {
-                            //ランバート反射を計算
-                            // 法線
-                            normal = getSceneNormal(pos);
-                            //ローカル座標で計算しているので、ディレクショナルライトの角度もローカル座標にする
-                            lightDir = mul(unity_WorldToObject, _WorldSpaceLightPos0).xyz;
-
-                            // lightDir = normalize(mul(unity_WorldToObject,_WorldSpaceLightPos0)).xyz;
-                            NdotL = saturate(dot(normal, lightDir));
-
-                            lightProbe = ShadeSH9(fixed4(UnityObjectToWorldNormal(normal), 1));
-
-                            lighting = lerp(lightProbe, _LightColor0, NdotL);
-                            
-                            ambient = Shade4PointLights(
-                            unity_4LightPosX0, 
-                            unity_4LightPosY0, 
-                            unity_4LightPosZ0,
-                            unity_LightColor[0].rgb, 
-                            unity_LightColor[1].rgb, 
-                            unity_LightColor[2].rgb, 
-                            unity_LightColor[3].rgb,
-                            unity_4LightAtten0, 
-                            pos, 
-                            normal);
-                            
-                            fout.color = fixed4(lighting * _Color.rgb + (ambient? ambient: 0.1), _Color.a);
-                            //fout.color = _Color;
-
-                            projectionPos = UnityObjectToClipPos(float4(pos, 1.0));
-                            fout.depth = projectionPos.z / projectionPos.w;
-                            return fout;
-                        }
-                        pos.xyz += marchingDist * rayDir.xyz;                                
-                    }
-                    
-                // }
-                discard;
-                fout.color = _BackGround;
-                return fout;
-            }
-
-            fragout frag (v2f i)
-            {
-                // float3 pos = mul(unity_WorldToObject,_WorldSpaceCameraPos);
-                float3 pos = mul(unity_WorldToObject, float4(_WorldSpaceCameraPos, 1)).xyz;
-                //float3 pos = _WorldSpaceCameraPos;
-                // レイの進行方向
-                float3 rayDir = normalize(i.pos.xyz - pos);
-                return raymarch(pos, rayDir);
-            }
             ENDCG
         }
+
+        // Pass{
+            //     Name "ShadowCaster"
+            //     Tags { "LightMode" = "ShadowCaster" }
+            //     Cull Back
+            //     CGPROGRAM
+            //     #pragma vertex vert
+            //     #pragma fragment frag
+
+            //     #pragma multi_compile_shadowcaster
+            
+            //     #include "UnityCG.cginc"
+
+
+            //     fixed4 _Color;
+            //     fixed4 _BackGround;
+            //     float _Size;
+            //     float _MaxDistance;
+            //     float _MengerLevel;
+
+            //     float min3(float x, float y, float z){
+                //         return min(x, min(y, z));
+            //     }
+
+            //     struct v2f
+            //     {
+                //         // V2F_SHADOW_CASTER;
+                //         float4 vertex : SV_POSITION;
+                //         float4 pos : POSITION1;
+            //     };
+
+            //     v2f vert (appdata_base v)
+            //     {
+                //         v2f o;
+                //         // TRANSFER_SHADOW_CASTER_NORMALOFFSET(o)
+                //         o.vertex = UnityClipSpaceShadowCasterPos(v.vertex, v.normal);
+                //         // o.vertex = UnityObjectToClipPos(v.vertex);
+                //         o.pos = v.vertex;
+                //         // o.pos = mul(unity_ObjectToWorld, v.vertex);
+                //         return o;
+            //     }
+
+            
+            //     float cubeDist(float3 pos){
+                //         float3 q = abs(pos) - _Size/2;
+                //         return length(max(q, 0)) + min(max(q.x, max(q.y, q.z)), 0);
+            //     }
+            
+            //     float pillarXDist(float3 pos) {
+                //         pos = abs(pos);
+                //         return max(pos.y, pos.z) - _Size/2;
+            //     }
+            //     float pillarYDist(float3 pos) {
+                //         pos = abs(pos);
+                //         return max(pos.z, pos.x) - _Size/2;
+            //     }
+            //     float pillarZDist(float3 pos) {
+                //         pos = abs(pos);
+                //         return max(pos.x, pos.y) - _Size/2;
+            //     }
+
+            //     float pillarXYZDist(float3 pos){
+                //         return min3(
+                //         pillarXDist(pos),
+                //         pillarYDist(pos),
+                //         pillarZDist(pos)
+                //         );
+            //     }
+            
+            //     float3 mengerizePos(float3 pos, float offset) {
+                //         pos = abs(pos);
+
+                //         pos -= offset/2;
+                //         pos = abs(pos);
+                //         pos += offset/2;
+
+                //         pos -= offset;
+                //         return pos;
+            //     }
+
+            //     float mengerDist(float3 pos) {
+                //         float cube = cubeDist(pos);
+                //         uint maxLevel = _MengerLevel * 10;
+                //         uint size = 3;
+                //         float offset = _Size;
+                //         float dist = pillarXYZDist(pos*size)/size;
+                //         float3 posX = pos, posY = pos, posZ = pos;
+
+                //         for (uint level = 0; level < maxLevel; level++){
+                    //             size *= 3;
+                    //             offset /= 3;
+                    //             pos = mengerizePos(pos, offset);
+                    //             dist = min(dist, pillarXYZDist(pos*size)/size);
+                //         }
+                //         // return dist;
+                //         return max(cube, -dist);
+                //         // return max(cube, -pillarXDist(pos)/9);
+            //     }
+
+            //     float sceneDist(float3 pos) {
+                //         //return cubeDist(pos);
+                //         return mengerDist(pos);
+                //         return (length(pos*0.1) - _Size/2)/0.1;
+            //     }
+
+            
+            //     float raymarch(float3 pos, float3 rayDir) {
+                //         float maxDistance = 100 * _Size * _MaxDistance;
+                //         float minDistance = 0.0001;
+                //         float marchingDist = sceneDist(pos); 
+                
+                //         while (length(pos) < maxDistance) {
+                    //             marchingDist = sceneDist(pos);
+                    //             if (abs(marchingDist) < minDistance) {
+                        //                 return 1;
+                    //             }
+                    //             pos.xyz += marchingDist * rayDir.xyz;                                
+                //         }
+                //         return 0;
+            //     }
+
+            //     float frag (v2f i) : SV_DEPTH
+            //     {
+                //         // レイの進行方向
+                //         float3 DirRayDir = ObjSpaceLightDir(i.pos);
+
+                //         float3 PointPos = mul(unity_WorldToObject, float4(_WorldSpaceLightPos0.xyz, 1)).xyz; 
+                
+                //         return _WorldSpaceLightPos0.w? 
+                //         raymarch(10 * -DirRayDir - i.pos.xyz, DirRayDir):
+                //         raymarch(PointPos, normalize(i.pos.xyz - PointPos));
+            //     }
+            //     ENDCG
+        // }
+        
         // pull in shadow caster from linguini/ShaderUtility shader
-        UsePass "linguini/ShaderUtility/SHADOWCASTER"
+        UsePass "linguini/ShaderUtility/ShadowCaster"
     }
 }
 

@@ -85,7 +85,7 @@
 
             v2f vert (appdata v)
             {
-                v2f o;
+                v2f o; 
                 o.vertex = UnityObjectToClipPos(v.vertex);
                 // //メッシュのワールド座標を代入
                 o.pos = mul(unity_ObjectToWorld, v.vertex);
@@ -224,6 +224,6 @@
             ENDCG
         }
         // pull in shadow caster from linguini/ShaderUtility shader
-        UsePass "linguini/ShaderUtility/SHADOWCASTER"
+        UsePass "linguini/ShaderUtility/ShadowCaster"
     }
 }
