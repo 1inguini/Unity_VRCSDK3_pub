@@ -1,4 +1,4 @@
-﻿Shader "linguini/RayMarching/CubeVariants"
+﻿Shader "linguini/RayMarching/MandelBox"
 {
     Properties
     {

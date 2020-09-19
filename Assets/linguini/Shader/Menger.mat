@@ -71,6 +71,7 @@ Material:
     - _OcclusionStrength: 1
     - _Parallax: 0.02
     - _Radius: 0.01
+    - _Resolution: 0.59
     - _Rotate: 1
     - _Size: 1
     - _SmoothnessTextureChannel: 0

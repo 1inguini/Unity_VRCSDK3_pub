@@ -94,6 +94,7 @@
                     pos = mengerizePos(pos, offset);
                     dist = min(dist, pillarXYZDist(pos*size)/size);
                 }
+                // return cube;
                 // return dist;
                 return max(cube, -dist);
                 // return max(cube, -pillarXDist(pos)/9);

@@ -109,7 +109,6 @@ float3 getSceneNormal(float3 pos){
 fragout raymarch(float3 pos, float3 rayDir) {
     float maxDistance = 1000 * _MaxDistance;
     float minDistance = 0.0001;
-    float marchingDist = sceneDist(pos); 
     
     fragout fout;
     
@@ -118,17 +117,36 @@ fragout raymarch(float3 pos, float3 rayDir) {
     float NdotL;
     fixed3 lightColor, lightProbe, lighting, ambient;
     float4 projectionPos;
-    while (length(pos) < maxDistance && minDistance <= abs(marchingDist)) {
+    float3 shadow = 1;
+    bool draw = false;
+    float3 drawPos = 0;
+    
+    for (
+    float marchingDist = sceneDist(pos);
+    length(pos) < maxDistance;
+    pos += abs(marchingDist) * rayDir
+    ) {
         marchingDist = sceneDist(pos);
-        pos.xyz += marchingDist * rayDir.xyz;                                
+        if (abs(marchingDist) < minDistance){
+            if (draw) {
+                shadow = float3(1,0,0);
+                break;
+            }
+            draw = true;
+            drawPos = pos;
+            rayDir = mul(unity_WorldToObject, _WorldSpaceLightPos0).xyz;
+            pos += rayDir * 10 * minDistance;
+        }
     }
     
     // 物体の近くにいなければ描画しない
-    clip(minDistance - abs(marchingDist));
+    if (!draw) discard;
+    // clip(minDistance - marchingDist);
+    // clip(marchingDist);
     
     //ランバート反射を計算
     // 法線
-    normal = getSceneNormal(pos);
+    normal = getSceneNormal(drawPos);
     //ローカル座標で計算しているので、ディレクショナルライトの角度もローカル座標にする
     lightDir = mul(unity_WorldToObject, _WorldSpaceLightPos0).xyz;
 
@@ -148,13 +166,13 @@ fragout raymarch(float3 pos, float3 rayDir) {
     unity_LightColor[2].rgb, 
     unity_LightColor[3].rgb,
     unity_4LightAtten0, 
-    pos, 
+    drawPos, 
     normal);
     
-    fout.color = fixed4(lighting * _Color.rgb + (ambient? ambient: 0.1), _Color.a);
+    fout.color = fixed4(shadow * lighting * _Color.rgb + (ambient? ambient: 0.1), _Color.a);
     //fout.color = _Color;
 
-    projectionPos = UnityObjectToClipPos(float4(pos, 1.0));
+    projectionPos = UnityObjectToClipPos(float4(drawPos, 1.0));
     fout.depth = projectionPos.z / projectionPos.w;
     return fout;
     // fout.color = _BackGround;
