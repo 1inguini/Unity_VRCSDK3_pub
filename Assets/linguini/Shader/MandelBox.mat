@@ -68,7 +68,7 @@ Material:
     - _Mode: 0
     - _OcclusionStrength: 1
     - _Parallax: 0.02
-    - _Resolution: 0.33
+    - _Resolution: 0
     - _Shape: 0
     - _SmoothnessTextureChannel: 0
     - _SpecularHighlights: 1
@@ -79,3 +79,4 @@ Material:
     - _BackGround: {r: 0, g: 0, b: 0, a: 1}
     - _Color: {r: 1, g: 1, b: 1, a: 1}
     - _EmissionColor: {r: 0, g: 0, b: 0, a: 1}
+    - _Shadow: {r: 1, g: 0, b: 0, a: 1}

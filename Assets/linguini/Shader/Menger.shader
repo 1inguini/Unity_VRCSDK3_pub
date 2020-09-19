@@ -4,6 +4,7 @@
     {
         // _MainTex ("Texture", 2D) = "white" {}
         _Color ("Color", Color) = (1,1,1)
+        _Shadow ("Shadow", Color) = (0,0,0)
         _BackGround ("BackGround", Color) = (0,0,0)
         _Size ("Size", Range(0,1)) = 1
         _MaxDistance ("MaxDistance", Range(0,1)) = 0.1

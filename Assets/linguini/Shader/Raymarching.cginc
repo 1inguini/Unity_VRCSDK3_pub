@@ -1,4 +1,5 @@
 fixed4 _Color;
+fixed4 _Shadow;
 fixed4 _BackGround;
 float _MaxDistance;
 float _Resolution;
@@ -106,58 +107,56 @@ float3 getSceneNormal(float3 pos){
     );
 }
 
-fragout raymarch(float3 pos, float3 rayDir) {
+#define minDistance 0.0001
+
+float3 raymarch (float3 pos, float3 rayDir) {
     float maxDistance = 1000 * _MaxDistance;
-    float minDistance = 0.0001;
-    
-    fragout fout;
-    
-    float3 normal;
-    float3 lightDir;
-    float NdotL;
-    fixed3 lightColor, lightProbe, lighting, ambient;
-    float4 projectionPos;
-    float3 shadow = 1;
-    bool draw = false;
-    float3 drawPos = 0;
-    
+    float3 initPos = pos;
     for (
     float marchingDist = sceneDist(pos);
-    length(pos) < maxDistance;
+    distance(pos, initPos) < maxDistance;
     pos += abs(marchingDist) * rayDir
     ) {
         marchingDist = sceneDist(pos);
         if (abs(marchingDist) < minDistance){
-            if (draw) {
-                shadow = float3(1,0,0);
-                break;
-            }
-            draw = true;
-            drawPos = pos;
-            rayDir = mul(unity_WorldToObject, _WorldSpaceLightPos0).xyz;
-            pos += rayDir * 10 * minDistance;
+            return pos;
         }
     }
-    
-    // 物体の近くにいなければ描画しない
-    if (!draw) discard;
-    // clip(minDistance - marchingDist);
-    // clip(marchingDist);
-    
-    //ランバート反射を計算
-    // 法線
-    normal = getSceneNormal(drawPos);
+    return 0;
+}
+
+#define K 3
+fixed shadowmarch (float3 pos, float3 rayDir) {
+    float maxDistance = 1000 * _MaxDistance;
+    float3 initPos = pos;
+    float result = 1;
+    for (
+    float marchingDist = sceneDist(pos);
+    distance(pos, initPos) < maxDistance;
+    pos += abs(marchingDist) * rayDir
+    ) {
+        marchingDist = sceneDist(pos);
+        if (abs(marchingDist) < minDistance){
+            return 0;
+        }
+        result = min(result, K * marchingDist / distance(pos,initPos));
+    }
+    return result;
+}
+
+fixed4 lighting(float3 pos, fixed4 shadow, fixed4 col) {
+float3 normal = getSceneNormal(pos);
     //ローカル座標で計算しているので、ディレクショナルライトの角度もローカル座標にする
-    lightDir = mul(unity_WorldToObject, _WorldSpaceLightPos0).xyz;
+    float3 lightDir = mul(unity_WorldToObject, _WorldSpaceLightPos0).xyz;
 
     // lightDir = normalize(mul(unity_WorldToObject,_WorldSpaceLightPos0)).xyz;
-    NdotL = saturate(dot(normal, lightDir));
+    float NdotL = saturate(dot(normal, lightDir));
 
-    lightProbe = ShadeSH9(fixed4(UnityObjectToWorldNormal(normal), 1));
+    float3 lightProbe = ShadeSH9(fixed4(UnityObjectToWorldNormal(normal), 1));
 
-    lighting = lerp(lightProbe, _LightColor0, NdotL);
+    float3 lighting = lerp(lightProbe, _LightColor0, NdotL);
     
-    ambient = Shade4PointLights(
+    float3 ambient = Shade4PointLights(
     unity_4LightPosX0, 
     unity_4LightPosY0, 
     unity_4LightPosZ0,
@@ -166,26 +165,39 @@ fragout raymarch(float3 pos, float3 rayDir) {
     unity_LightColor[2].rgb, 
     unity_LightColor[3].rgb,
     unity_4LightAtten0, 
-    drawPos, 
+    pos, 
     normal);
-    
-    fout.color = fixed4(shadow * lighting * _Color.rgb + (ambient? ambient: 0.1), _Color.a);
-    //fout.color = _Color;
 
-    projectionPos = UnityObjectToClipPos(float4(drawPos, 1.0));
-    fout.depth = projectionPos.z / projectionPos.w;
-    return fout;
-    // fout.color = _BackGround;
-    // fout.depth = 0;
-    // return fout;
+    return fixed4(shadow.xyz * lighting * col.rgb + (ambient? ambient: 0.1), shadow.a * col.a);
 }
+
 
 fragout frag (v2f i)
 {
+    fragout o;
     // float3 pos = mul(unity_WorldToObject,_WorldSpaceCameraPos);
     float3 pos = mul(unity_WorldToObject, float4(_WorldSpaceCameraPos, 1)).xyz;
     //float3 pos = _WorldSpaceCameraPos;
     // レイの進行方向
     float3 rayDir = normalize(i.pos.xyz - pos);
-    return raymarch(pos, rayDir);
+    pos = raymarch(pos, rayDir);
+    if (pos.x == 0, pos.y == 0, pos.z == 0) discard;
+    
+    float4 projectionPos = UnityObjectToClipPos(float4(pos, 1.0));
+    o.depth = projectionPos.z / projectionPos.w;
+
+    rayDir = mul(unity_WorldToObject, _WorldSpaceLightPos0).xyz;
+    fixed4 shadow = lerp(_Shadow, 1, shadowmarch(pos + rayDir * 10 * minDistance, rayDir));
+    o.color = lighting(pos, shadow, _Color);
+    return o;
 }
+
+// fragout frag (v2f i)
+// {
+    //     // float3 pos = mul(unity_WorldToObject,_WorldSpaceCameraPos);
+    //     float3 pos = mul(unity_WorldToObject, float4(_WorldSpaceCameraPos, 1)).xyz;
+    //     //float3 pos = _WorldSpaceCameraPos;
+    //     // レイの進行方向
+    //     float3 rayDir = normalize(i.pos.xyz - pos);
+    //     return raymarch(pos, rayDir);
+// }
