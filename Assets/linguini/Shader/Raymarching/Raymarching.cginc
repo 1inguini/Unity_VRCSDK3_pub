@@ -1,5 +1,5 @@
 #ifndef RAYMARCHING_INCLUDED
-#define RAYMARCHING_INCLUDED
+    #define RAYMARCHING_INCLUDED
 
     fixed4 _Color;
     fixed4 _Shadow;
@@ -107,10 +107,11 @@
 
     float3 getSceneNormal(float3 pos){
         float EPS = 0.0001;
+        float def = sceneDist(pos);
         return normalize(float3(
-        sceneDist(pos + float3(EPS,0,0)) - sceneDist(pos + float3(-EPS,0,0)),
-        sceneDist(pos + float3(0,EPS,0)) - sceneDist(pos + float3(0,-EPS,0)),
-        sceneDist(pos + float3(0,0,EPS)) - sceneDist(pos + float3(0,0,-EPS))
+        sceneDist(pos + float3(EPS,0,0)) - def,
+        sceneDist(pos + float3(0,EPS,0)) - def,
+        sceneDist(pos + float3(0,0,EPS)) - def
         )
         );
     }
@@ -135,7 +136,7 @@
 
     #define K 3
     fixed shadowmarch (float3 pos, float3 rayDir) {
-        float maxDistance = 1000 * _MaxDistance;
+        float maxDistance = 10 * _MaxDistance;
         float3 initPos = pos;
         float result = 1;
         for (
@@ -219,7 +220,7 @@
 
         rayDir = mul(unity_WorldToObject, _WorldSpaceLightPos0).xyz;
         fixed4 shadow = lerp(_Shadow, 1, shadowmarch(pos + rayDir * 10 * minDistance, rayDir));
-        o.color = lighting(pos, shadow, _Color);
+        o.color = lighting(pos, 1, _Color);
         return o;
     }
 
