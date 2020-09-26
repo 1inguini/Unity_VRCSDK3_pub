@@ -2,7 +2,7 @@
     #define RAYMARCHING_INCLUDED
 
     fixed4 _Color;
-    fixed4 _Shadow;
+    bool _ShadowOn;
     fixed4 _BackGround;
     float _MaxDistance;
     float _Resolution;
@@ -136,7 +136,7 @@
 
     #define K 3
     fixed shadowmarch (float3 pos, float3 rayDir) {
-        float maxDistance = 10 * _MaxDistance;
+        float maxDistance = 1; // 10 * _MaxDistance;
         float3 initPos = pos;
         float result = 1;
         for (
@@ -153,7 +153,7 @@
         return result;
     }
 
-    fixed4 lighting(float3 pos, fixed4 shadow, fixed4 col) {
+    fixed4 lighting(float3 pos, fixed shadow, fixed4 col) {
         float3 normal = getSceneNormal(pos);
 
         float3 lightDir;
@@ -185,7 +185,7 @@
         pos, 
         normal);
 
-        return fixed4(shadow.xyz * lighting * col.rgb + (ambient? ambient: 0.1), shadow.a * col.a);
+        return fixed4(shadow * lighting * col.rgb + (ambient? ambient: 0.1), col.a);
     }
 
 
@@ -219,8 +219,8 @@
         o.depth = projectionPos.z / projectionPos.w;
 
         rayDir = mul(unity_WorldToObject, _WorldSpaceLightPos0).xyz;
-        fixed4 shadow = lerp(_Shadow, 1, shadowmarch(pos + rayDir * 10 * minDistance, rayDir));
-        o.color = lighting(pos, 1, _Color);
+        fixed shadow = _ShadowOn? shadowmarch(pos + rayDir * 10 * minDistance, rayDir): 1;
+        o.color = lighting(pos, shadow, _Color);
         return o;
     }
 

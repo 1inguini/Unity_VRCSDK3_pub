@@ -9,7 +9,7 @@ Material:
   m_PrefabAsset: {fileID: 0}
   m_Name: Menger
   m_Shader: {fileID: 4800000, guid: aba483cc2e41dd543a7fe571871cc61c, type: 3}
-  m_ShaderKeywords: _EMISSION _LIGHTMAPPING_DYNAMIC_LIGHTMAPS _UVSEC_UV1
+  m_ShaderKeywords: _EMISSION _LIGHTMAPPING_DYNAMIC_LIGHTMAPS _SHADOWON_ON _UVSEC_UV1
   m_LightmapFlags: 4
   m_EnableInstancingVariants: 0
   m_DoubleSidedGI: 0
@@ -64,15 +64,16 @@ Material:
     - _GlossMapScale: 1
     - _Glossiness: 0.5
     - _GlossyReflections: 1
-    - _MaxDistance: 1
+    - _MaxDistance: 0.1
     - _MengerLevel: 0.3
     - _Metallic: 0
     - _Mode: 0
     - _OcclusionStrength: 1
     - _Parallax: 0.02
     - _Radius: 0.01
-    - _Resolution: 0.59
+    - _Resolution: 0.543
     - _Rotate: 1
+    - _ShadowOn: 1
     - _Size: 1
     - _SmoothnessTextureChannel: 0
     - _SpecularHighlights: 1

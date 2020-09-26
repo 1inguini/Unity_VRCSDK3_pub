@@ -4,7 +4,7 @@
     {
         // _MainTex ("Texture", 2D) = "white" {}
         _Color ("Color", Color) = (1,1,1)
-        _Shadow ("Shadow", Color) = (0,0,0)
+        [MaterialToggle] _ShadowOn ("ShadowOn", Float) = 0
         _BackGround ("BackGround", Color) = (0,0,0)
         _MaxDistance ("MaxDistance", Range(0,1)) = 0.1
         _Resolution ("Resolution", Range(0,1)) = 0.3
@@ -28,7 +28,7 @@
             #include "UnityCG.cginc"
             #include "Lighting.cginc"
             
-            #pragma shader_feature OBJECT
+            #define OBJECT
             float sceneDist(float3 pos);
             #include "Raymarching.cginc"
 
