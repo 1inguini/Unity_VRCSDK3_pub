@@ -28,8 +28,32 @@
             fixed4 _Color;
             
             #define EPS 0.0001
+            #define INF 3.402823466e+38
             
-            #define IDMAT4 float4x4(1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,0,1)
+            float4x4 IDMAT4 = {
+                {1,0,0,0}, 
+                {0,1,0,0},
+                {0,0,1,0},
+                {0,0,0,1}
+            };
+            
+            float inf2neg(float x) {
+                return INF <= x? -1: x;
+            }
+
+            float min3(float x, float y, float z){
+                return min(x, min(y, z));
+            }
+            float min3(float3 xyz) {
+                return min3(xyz.x, xyz.y, xyz.z);
+            }
+
+            float max3(float x, float y, float z){
+                return max(x, max(y, z));
+            }
+            float max3(float3 xyz) {
+                return max3(xyz.x, xyz.y, xyz.z);
+            }
             
             float square(float x) {
                 return x*x;
@@ -40,12 +64,12 @@
 
             float solveQuadratic(float a, float b, float c) {
                 float d = square(b) - 4*a*c;
-                return d < 0? -1: (-b - sqrt(d))/(2*a);
+                return d < 0? -INF: (-b - sqrt(d))/(2*a);
             }
 
             float solveQuadraticHalf(float a, float halfB, float c) {
                 float quartD = square(halfB) - a * c;
-                return quartD < 0? -1: (-halfB - sqrt(quartD))/a;
+                return quartD < 0? -INF: (-halfB - sqrt(quartD))/a;
             }
             
             // // http://answers.unity.com/answers/641391/view.html
@@ -79,7 +103,7 @@
                 //     return transpose(cofactors) / determinant(input);
             // }
 
-            float4x4 internalRodrigues(float3 n, float cosT, float sinT) {
+            float4x4 rodriguesMatrixCosSin(float3 n, float cosT, float sinT) {
                 float3 sq = float3(n.x*n.x, n.y*n.y, n.z*n.z);
                 float3 adj = float3(n.x*n.y, n.y*n.z, n.z*n.x);
                 float r = 1 - cosT;
@@ -94,46 +118,55 @@
             float4x4 rodriguesMatrix(float3 n, float theta) {
                 float sinT = sin(theta);
                 float cosT = cos(theta);
-                return internalRodrigues(n,cosT,sinT);
+                return rodriguesMatrixCosSin(n,cosT,sinT);
             }
 
             float4x4 rodriguesMatrixCos(float3 n, float cosT) {
                 float sinT = sqrt(1-square(cosT));
-                return internalRodrigues(n,cosT,sinT);
+                return rodriguesMatrixCosSin(n,cosT,sinT);
             }
 
 
-            float4x4 rotationMatrix(float3 thetas) {
+            float4x4 rotationMatrix(float x, float y, float z) {
                 float s, c;
-                s = sin(thetas.x);
-                c = cos(thetas.x);
+                s = sin(x);
+                c = cos(x);
                 float4x4 o = float4x4(1,0,0,0, 0,c,-s,0, 0,s,c,0, 0,0,0,1);
-                s = sin(thetas.y);
-                c = cos(thetas.y);
+                s = sin(y);
+                c = cos(y);
                 o = mul(o, float4x4(c,0,s,0, 0,1,0,0, -s,0,c,0, 0,0,0,1));
-                s = sin(thetas.z);
-                c = cos(thetas.z);
+                s = sin(z);
+                c = cos(z);
                 o = mul(o, float4x4(c,-s,0,0, s,c,0,0, 0,0,1,0, 0,0,0,1));
                 return o;                
             }
+            float4x4 rotationMatrix(float3 thetas) {
+                return rotationMatrix(thetas.x, thetas.y, thetas.z);                
+            }
 
-            float4x4 shiftMatrix(float3 pos) {
+            float4x4 shiftMatrix(float x, float y, float z) {
                 float4x4 mat = 0;
-                mat[0][3] = pos.x;
-                mat[1][3] = pos.y;
-                mat[2][3] = pos.z;
+                mat[0][3] = x;
+                mat[1][3] = y;
+                mat[2][3] = z;
                 mat[3][3] = 1;
                 // mat[3] = float4(pos,1);
                 return mat; // + float4x4(0,0,0,pos.x, 0,0,0,pos.y, 0,0,0,pos.z, 0,0,0,0)
             }
+            float4x4 shiftMatrix(float3 pos) {
+                return shiftMatrix(pos.x, pos.y, pos.z);
+            }
 
-            float4x4 scaleMatrix(float3 scale) {
+            float4x4 scaleMatrix(float x, float y, float z) {
                 float4x4 mat = 0;
-                mat[0][0] = scale.x;
-                mat[1][1] = scale.y;
-                mat[2][2] = scale.z;
+                mat[0][0] = x;
+                mat[1][1] = y;
+                mat[2][2] = z;
                 mat[3][3] = 1;
                 return mat;
+            }
+            float4x4 scaleMatrix(float3 scale) {
+                return scaleMatrix(scale.x, scale.y, scale.z);
             }
 
             struct appdata
@@ -153,41 +186,152 @@
                 float depth : SV_Depth;
             };
             
-
-
             struct rayDef {
                 float3 pos;
                 float3 dir;
             };
 
-            struct movedRay{
-                rayDef ray;
-                float correction;
-            };            
+            // struct movedRay{
+                //     rayDef ray;
+                //     float correction;
+            // };            
             
-            movedRay matrixApply(float4x4 mat, rayDef ray) {
-                movedRay o;
+            // movedRay matrixApply(float4x4 mat, rayDef ray) {
+                //     movedRay o;
+                //     // mat = inverse(mat);
+                //     o.ray.pos = mul(mat, float4(ray.pos, 1)).xyz;
+                //     o.ray.dir = mul(mat, ray.dir).xyz;
+                //     o.correction = length(o.ray.dir);
+                //     o.ray.dir /= o.correction;
+                //     return o;
+            // }
+            
+            rayDef matrixApply(float4x4 mat, rayDef ray) {
                 // mat = inverse(mat);
-                o.ray.pos = mul(mat, float4(ray.pos, 1)).xyz;
-                o.ray.dir = mul(mat, ray.dir).xyz;
-                o.correction = length(o.ray.dir);
-                o.ray.dir /= o.correction;
-                return o;
+                ray.pos = mul(mat, float4(ray.pos, 1)).xyz;
+                ray.dir = mul(mat, ray.dir).xyz;
+                return ray;
             }
 
             struct intersection {
-                float dist;
+                float t;
                 float3 normal;
             };
             
-            intersection foreground(intersection b0, intersection b1) {
-                // return b0 if b0 is foreground, b1 if else.
-                bool isB0 = (0 < b0.dist && 0 < b1.dist)? (b0.dist < b1.dist): (b1.dist < b0.dist);
-                b0.dist = isB0? b0.dist: b1.dist;
-                b0.normal = isB0? b0.normal: b1.normal;
-                return b0;
-            }
+            struct bodyDef {
+                uint base; // 0:plane 1:sphere 2:cube
+                float4x4 mat;
+                rayDef ray;
+                float3 pos;
+                float3 normal;
+            };
+
+            #define PLANE 0
+            #define SPHERE 1
+            #define CUBE 2
+
+
+            #define PROTOTYPE_BODY(_body) intersection _body##(rayDef ray);
+            PROTOTYPE_BODY(plane)
+            PROTOTYPE_BODY(sphere)
+            PROTOTYPE_BODY(cube)
+
+            bodyDef runBody(bodyDef body) {
+                rayDef ray = matrixApply(body.mat, body.ray);
+                intersection i;
+                [call] switch(body.base){
+                    case 0: {i = plane(ray); break;}
+                    case 1: {i = sphere(ray); break;}
+                    case 2: {i = cube(ray); break;}
+                }
+                body.pos = i.t*body.ray.dir + body.ray.pos;
+                body.normal = mul(transpose(body.mat), float4(i.normal, 1)).xyz;
+                return body;
+            };
             
+            bodyDef initBody(uint base, float4x4 mat, rayDef ray) {
+                bodyDef o;
+                o.base = base;
+                o.mat = mat;
+                o.ray = ray;
+                o.pos = ray.pos;
+                o.normal = 0;
+                o = runBody(o);
+                return o;
+            }
+
+            float getDist(bodyDef b){
+                return sign(dot(b.pos - b.ray.pos, b.ray.dir))*distance(b.pos, b.ray.pos);
+                // return
+                // (b.ray.dir.x?
+                // (b.i.pos.x - b.ray.pos.x)/b.ray.dir.x:
+                // (b.ray.dir.y?
+                // (b.i.pos.y - b.ray.pos.y)/b.ray.dir.y:
+                // ((b.i.pos.z - b.ray.pos.z)/b.ray.dir.z)));
+            }
+
+            bodyDef not(bodyDef b) {
+                // b.i.dist *= -1;
+                b.pos -= 2*(b.pos - b.ray.pos);
+                b.normal *= -1;
+                return b;
+            }
+
+            bodyDef or(bodyDef b[2]) {
+                // return b0 if b0 is foreground, b1 if else.
+                float dist[2] = { getDist(b[0]), getDist(b[1]) };
+                bool isB0 = (0 < dist[0] && 0 < dist[1])? (dist[0] < dist[1]): (dist[1] < dist[0]);
+                return b[!isB0];
+            }
+            bodyDef or(bodyDef b0, bodyDef b1) {
+                bodyDef b[2] = {b0, b1};
+                return or(b);
+            }
+
+            // bodyDef and(bodyDef b[2]) {
+                //     // return b0 if b0 is foreground, b1 if else.
+                //     float dist[2] = { getDist(b[0]), getDist(b[1]) };
+                //     bool isB[2];
+                //     isB[0] = (0 < dist[0] && dist[0] < dist[1]);
+                //     isB[1] = (0 < dist[1] && dist[1] < dist[0]);
+                //     b0.pos = isB[0]? b[0].pos:(isB[1]? b[1].pos: -1);
+                //     b0.normal = isB[0]? b0.normal: b1.normal;
+                //     return b0;
+            // }
+
+            // intersection not(intersection b) {
+                //     b.dist *= -1;
+                //     b.normal *= -1;
+                //     return b;
+            // }
+
+            // intersection or(intersection b0, intersection b1) {
+                //     // return b0 if b0 is foreground, b1 if else.
+                //     bool isB0 = (0 < b0.dist && 0 < b1.dist)? (b0.dist < b1.dist): (b1.dist < b0.dist);
+                //     b0.dist = isB0? b0.dist: b1.dist;
+                //     b0.normal = isB0? b0.normal: b1.normal;
+                //     return b0;
+            // }
+            
+            // intersection and(intersection b0, intersection b1) {
+                //     // return b0 if b0 is foreground, b1 if else.
+                //     bool2 isB;
+                //     isB[0] = (0 < b0.dist && b0.dist < b1.dist);
+                //     isB[1] = (0 < b1.dist && b1.dist < b0.dist);
+                //     b0.dist = isB[0]? b0.dist:(isB[1]? b1.dist: -1);
+                //     b0.normal = isB[0]? b0.normal: b1.normal;
+                //     return b0;
+            // }
+
+            // intersection max(intersection b0, intersection b1) {
+                //     // return b0 if b0 is foreground, b1 if else.
+                //     bool isB0 = (0 < b0.dist && 0 < b1.dist)? (b0.dist < b1.dist): (b1.dist < b0.dist);
+                //     b0.dist = isB0? b0.dist: b1.dist;
+                //     b0.normal = isB0? b0.normal: b1.normal;
+                //     return b0;
+            // }
+
+
             #define NORMAL_FUNC(_bodyName) float3 _bodyName##Normal(float3 pos) { \
                 float def = _bodyName##Def(pos); \
                 return normalize(float3( \
@@ -198,44 +342,36 @@
                 ); \
             }
 
-            #define INTERSECTION_FUNC(_bodyName) intersection _bodyName##(float4x4 mat, rayDef ray) { \
+            #define INTERSECTION_FUNC(_bodyName) intersection _bodyName##(rayDef ray) { \
                 intersection o; \
-                movedRay mray = matrixApply(mat, ray); \
-                o.dist = _bodyName##Dist(mray.ray); \
-                float3 pos = o.dist*mray.ray.dir + mray.ray.pos; \
-                o.dist /= mray.correction; \
-                o.normal = (o.dist <= 0)? 0: \
-                mul( \
-                transpose(mat), \
-                float4(_bodyName##Normal(pos),1)).xyz; \
+                o.t = _bodyName##Dist(ray); \
+                o.normal = _bodyName##Normal(o.t*ray.dir + ray.pos); \
                 return o; \
             }
 
-            float planeDef(float3 normal, float3 pos) {
-                return dot(normal, pos);
-            }
+            // float planeDef(float3 normal, float3 pos) {
+                //     return dot(normal, pos);
+            // }
 
             inline float planeFromNormalDist(float3 normal, rayDef ray) {
                 float DdotN = dot(ray.dir, normal);
                 return -dot(ray.pos, normal)/(DdotN? DdotN: 1);
             }
 
-            intersection plane(float4x4 mat, rayDef ray) {
+            intersection plane(rayDef ray) {
                 intersection o;
-                movedRay mray = matrixApply(mat, ray);
-                o.normal = float3(0,sign(mray.ray.pos.y),0);
-                o.dist = o.normal.y? planeFromNormalDist(o.normal, mray.ray): -1;
-                o.normal = (o.dist <= 0)? 0: mul(transpose(mat), float4(o.normal,1)).xyz;
+                o.normal = float3(0,sign(ray.pos.y),0);
+                o.t = planeFromNormalDist(o.normal, ray);
                 return o;
             }
 
-            float sphereDef(float3 pos) {
-                // return square(pos.x) + square(pos.y) + square(pos.z) - 0.25;
-                return length(pos) - 0.5;
-            }
+            // float sphereDef(float3 pos) {
+                //     // return square(pos.x) + square(pos.y) + square(pos.z) - 0.25;
+                //     return length(pos) - 0.5;
+            // }
             
             float3 sphereNormal(float3 pos){
-                return pos - 0;
+                return normalize(pos - 0);
             }
 
             float sphereDist(rayDef ray) {
@@ -261,36 +397,69 @@
                 //     // return o;
             // }
 
+            float cubeDef(float3 pos) {
+                return max3(abs(pos)) - 0.5;
+            }
+
+            // NORMAL_FUNC(cube)
+
+            float3 cubeNormal(float3 pos) {
+                return normalize(step(pos, 0.5-EPS));
+            }
+
+            float cubeDist(rayDef ray) {
+                float2 buf;
+                float3 tmin, tmax;
+                #define SOLVE(i) \
+                buf[0] = (0.5 - ray.pos.i)/ray.dir.i; \
+                buf[1] = -(0.5 + ray.pos.i)/ray.dir.i; \
+                tmin.i = max(0, min(buf[0],buf[1])); \
+                tmax.i = max(buf[0],buf[1]);
+                SOLVE(x)
+                SOLVE(y)
+                SOLVE(z)
+                #undef SOLVE
+                float2 tbound = float2(max3(tmin), min3(tmax));
+                return tbound[1] < tbound[0]? -1: tbound[0];
+            }
+
+            INTERSECTION_FUNC(cube)
+
             float torusDef(float3 pos) {
                 return distance((length(pos.xy) - 0.1), pos.z) - 0.25;
                 // return square(sqrt(square(pos.x) + square(pos.y)) - 0.1) + square(pos.z) - 0.25;
             }
-            
             NORMAL_FUNC(torus)
             
-
-            intersection scene(rayDef ray) {
+            bodyDef scene(rayDef ray) {
                 
-                intersection plane0,
-                sphere0, sphere1;
-                float4x4 matPlane0 = IDMAT4,
-                matSphere0 = IDMAT4, matSphere1 = IDMAT4;
+                bodyDef plane0, cube0, sphere0, sphere1;
+                float4x4 mat = IDMAT4;
                 
-                matPlane0 -= shiftMatrix(float3(0,0,0));
-                matPlane0 = mul(matPlane0, rodriguesMatrix(normalize(float3(0,0,1)), UNITY_HALF_PI*0.5));
-                plane0 = plane(matPlane0, ray);
+                mat -= shiftMatrix(float3(0,-0.5,0));
+                mat = mul(mat, rodriguesMatrix(normalize(float3(0,0,1)), UNITY_HALF_PI*0.5));
+                // plane0 = plane(mat, ray);
+                plane0 = initBody(PLANE, mat, ray);
+                mat = IDMAT4;
 
-                matSphere0 = mul(matSphere0, scaleMatrix(float3(2,2,2)));
-                // matSphere0 += shiftMatrix(float3(0.3,0,0));
-                sphere0 = sphere(matSphere0, ray);
-                // posS0 = s0*sphere0.ray.dir + sphere0.ray.pos;
+                // mat -= shiftMatrix(0.3,0,0);
+                // mat = mul(mat, scaleMatrix(2,2,2));
+                cube0 = initBody(CUBE, mat, ray);
+                mat = IDMAT4;
                 
-                matSphere1 -= shiftMatrix(float3(0,-0.5,0));
-                matSphere1 = mul(matSphere1, scaleMatrix(float3(2,2,1)));
-                sphere1 = sphere(matSphere1, ray);
-                // posS1 = s1*sphere1.ray.dir + sphere1.ray.pos;
+                mat = mul(mat, scaleMatrix(float3(1,2,2)));
+                // mat += shiftMatrix(float3(0.3,0,0));
+                // sphere0 = sphere(mat, ray);
+                sphere0 = initBody(SPHERE, mat, ray);
+                mat = IDMAT4;
 
-                return foreground(plane0, foreground(sphere0,sphere1));
+                mat -= shiftMatrix(float3(0,0.3,0));
+                mat = mul(mat, scaleMatrix(float3(2,2,1)));
+                // sphere1 = sphere(mat, ray);
+                sphere1 = initBody(SPHERE, mat, ray);
+
+                // return or(sphere0, sphere1);
+                return cube0;
             }
 
             fixed4 lighting(float3 pos, float3 normal, fixed shadow, fixed4 col) {
@@ -343,9 +512,6 @@
                 return o;
             }
 
-            float min3(float x, float y, float z){
-                return min(x, min(y, z));
-            }
 
             //fragout frag (v2f i)
             fragout frag (v2f i)
@@ -369,11 +535,12 @@
                 ray.dir = normalize(i.pos.xyz - ray.pos);
 
                 // float4x4 rayCoord = addShift(dir2zAxis(rayDirV), -pos);
-                intersection p = scene(ray);
+                bodyDef p = scene(ray);
 
-                clip(p.dist);
+                clip(getDist(p));
                 
-                float4 pos = float4(p.dist*ray.dir + ray.pos, 1); 
+                // float4 pos = float4(p.dist*ray.dir + ray.pos, 1); 
+                float4 pos = float4(p.pos, 1); 
                 float4 projectionPos;
                 #if defined(WORLD)
                     projectionPos = UnityWorldToClipPos(pos);
