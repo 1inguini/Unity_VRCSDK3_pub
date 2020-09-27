@@ -188,24 +188,15 @@
                 return b0;
             }
             
-            #define NORMAL(_funcName, _pos)  float def = _funcName##(pos); \
-            return normalize(float3( \
-            _funcName##(pos + float3(EPS,0,0)) - def, \
-            _funcName##(pos + float3(0,EPS,0)) - def, \
-            _funcName##(pos + float3(0,0,EPS)) - def \
-            ) \
-            );
-
-            // #define INTERSECTION(_distFunc, _normalFunc, _mat, _ray) intersection _distFunc##_normalFunc; \
-            // movedRay _mat##_ray = matrixApply(_mat, _ray); \
-            // _distFunc##_normalFunc.dist = _distFunc##(_mat##_ray.ray); \
-            // float3 _distFunc##_normalFunc##_mat##_ray##_pos = _distFunc##_normalFunc.dist*_mat##_ray.ray.dir + _mat##_ray.ray.pos; \
-            // _distFunc##_normalFunc.dist /= _mat##_ray.correction; \
-            // _distFunc##_normalFunc.normal = (_distFunc##_normalFunc.dist <= 0)? 0: \
-            // mul( \
-            // transpose(_mat), \
-            // float4(_normalFunc##(_distFunc##_normalFunc##_mat##_ray##_pos),1)).xyz; \
-            // return _distFunc##_normalFunc;
+            #define NORMAL_FUNC(_bodyName) float3 _bodyName##Normal(float3 pos) { \
+                float def = _bodyName##Def(pos); \
+                return normalize(float3( \
+                _bodyName##Def(pos + float3(EPS,0,0)) - def, \
+                _bodyName##Def(pos + float3(0,EPS,0)) - def, \
+                _bodyName##Def(pos + float3(0,0,EPS)) - def \
+                ) \
+                ); \
+            }
 
             #define INTERSECTION_FUNC(_bodyName) intersection _bodyName##(float4x4 mat, rayDef ray) { \
                 intersection o; \
@@ -237,9 +228,6 @@
                 o.normal = (o.dist <= 0)? 0: mul(transpose(mat), float4(o.normal,1)).xyz;
                 return o;
             }
-            // intersection plane(float4x4 mat, rayDef ray) {
-                //     INTERSECTION(planeDist, planeNormal, mat, ray)
-            // }
 
             float sphereDef(float3 pos) {
                 // return square(pos.x) + square(pos.y) + square(pos.z) - 0.25;
@@ -247,7 +235,6 @@
             }
             
             float3 sphereNormal(float3 pos){
-                // NORMAL(sphereDef, pos)
                 return pos - 0;
             }
 
@@ -278,10 +265,9 @@
                 return distance((length(pos.xy) - 0.1), pos.z) - 0.25;
                 // return square(sqrt(square(pos.x) + square(pos.y)) - 0.1) + square(pos.z) - 0.25;
             }
-
-            float3 torusNormal(float3 pos) {
-                NORMAL(torusDef, pos)
-            }
+            
+            NORMAL_FUNC(torus)
+            
 
             intersection scene(rayDef ray) {
                 
