@@ -23,7 +23,7 @@
             #include "UnityCG.cginc"
             #include "Lighting.cginc"
             
-            #define OBJECT
+            #define WORLD
 
             fixed4 _Color;
             
@@ -36,36 +36,36 @@
                 return dot(v,v);
             }
             
-            // http://answers.unity.com/answers/641391/view.html
-            float4x4 inverse(float4x4 input)
-            {
-                #define minor(a,b,c) determinant(float3x3(input.a, input.b, input.c))
-                //determinant(float3x3(input._22_23_23, input._32_33_34, input._42_43_44))
+            // // http://answers.unity.com/answers/641391/view.html
+            // float4x4 inverse(float4x4 input)
+            // {
+            //     #define minor(a,b,c) determinant(float3x3(input.a, input.b, input.c))
+            //     //determinant(float3x3(input._22_23_23, input._32_33_34, input._42_43_44))
                 
-                float4x4 cofactors = float4x4(
-                minor(_22_23_24, _32_33_34, _42_43_44), 
-                -minor(_21_23_24, _31_33_34, _41_43_44),
-                minor(_21_22_24, _31_32_34, _41_42_44),
-                -minor(_21_22_23, _31_32_33, _41_42_43),
+            //     float4x4 cofactors = float4x4(
+            //     minor(_22_23_24, _32_33_34, _42_43_44), 
+            //     -minor(_21_23_24, _31_33_34, _41_43_44),
+            //     minor(_21_22_24, _31_32_34, _41_42_44),
+            //     -minor(_21_22_23, _31_32_33, _41_42_43),
                 
-                -minor(_12_13_14, _32_33_34, _42_43_44),
-                minor(_11_13_14, _31_33_34, _41_43_44),
-                -minor(_11_12_14, _31_32_34, _41_42_44),
-                minor(_11_12_13, _31_32_33, _41_42_43),
+            //     -minor(_12_13_14, _32_33_34, _42_43_44),
+            //     minor(_11_13_14, _31_33_34, _41_43_44),
+            //     -minor(_11_12_14, _31_32_34, _41_42_44),
+            //     minor(_11_12_13, _31_32_33, _41_42_43),
                 
-                minor(_12_13_14, _22_23_24, _42_43_44),
-                -minor(_11_13_14, _21_23_24, _41_43_44),
-                minor(_11_12_14, _21_22_24, _41_42_44),
-                -minor(_11_12_13, _21_22_23, _41_42_43),
+            //     minor(_12_13_14, _22_23_24, _42_43_44),
+            //     -minor(_11_13_14, _21_23_24, _41_43_44),
+            //     minor(_11_12_14, _21_22_24, _41_42_44),
+            //     -minor(_11_12_13, _21_22_23, _41_42_43),
                 
-                -minor(_12_13_14, _22_23_24, _32_33_34),
-                minor(_11_13_14, _21_23_24, _31_33_34),
-                -minor(_11_12_14, _21_22_24, _31_32_34),
-                minor(_11_12_13, _21_22_23, _31_32_33)
-                );
-                #undef minor
-                return transpose(cofactors) / determinant(input);
-            }
+            //     -minor(_12_13_14, _22_23_24, _32_33_34),
+            //     minor(_11_13_14, _21_23_24, _31_33_34),
+            //     -minor(_11_12_14, _21_22_24, _31_32_34),
+            //     minor(_11_12_13, _21_22_23, _31_32_33)
+            //     );
+            //     #undef minor
+            //     return transpose(cofactors) / determinant(input);
+            // }
 
 
             struct appdata
@@ -229,14 +229,63 @@
                 float3 dir;
             };
 
-            // float plane(float3 pos) {
-                //     float3 n = float3(0,0,1);
-                //     return dot(n, pos);
-            // }
+            struct movedRay{
+                rayDef ray;
+                float correction;
+            };            
             
-            float plane(rayDef ray) {
-                float normal = float3(1,0,0);
-                return -dot(ray.pos, normal)/dot(ray.dir, normal);
+            movedRay matrixApply(float4x4 mat, rayDef ray) {
+                movedRay o;
+                // mat = inverse(mat);
+                o.ray.pos = mul(mat, float4(ray.pos, 1)).xyz;
+                o.ray.dir = mul(mat, ray.dir).xyz;
+                o.correction = length(o.ray.dir);
+                o.ray.dir /= o.correction;
+                return o;
+            }
+
+            struct intersection {
+                float dist;
+                float3 normal;
+            };
+
+            #define NORMAL(_funcName, _pos)  float EPS = 0.0001; \
+            float def = _funcName##(pos); \
+            return normalize(float3( \
+            _funcName##(pos + float3(EPS,0,0)) - def, \
+            _funcName##(pos + float3(0,EPS,0)) - def, \
+            _funcName##(pos + float3(0,0,EPS)) - def \
+            ) \
+            );
+
+            #define INTERSECTION(_distFunc, _normalFunc, _mat, _ray) intersection _distFunc##_normalFunc; \
+            movedRay _mat##_ray = matrixApply(_mat, _ray); \
+            _distFunc##_normalFunc.dist = _distFunc##(_mat##_ray.ray); \
+            float3 _distFunc##_normalFunc##_mat##_ray##_pos = _distFunc##_normalFunc.dist*_mat##_ray.ray.dir + _mat##_ray.ray.pos; \
+            _distFunc##_normalFunc.dist /= _mat##_ray.correction; \
+            _distFunc##_normalFunc.normal = (_distFunc##_normalFunc.dist <= 0)? 0: \
+            mul( \
+            transpose(_mat), \
+            float4(_normalFunc##(_distFunc##_normalFunc##_mat##_ray##_pos),1)).xyz; \
+            return _distFunc##_normalFunc;
+
+            float planeDef(float3 pos) {
+                float3 n = float3(0,0,1);
+                return dot(n, pos);
+            }
+
+            float3 planeNormal(float3 pos){
+                NORMAL(planeDef, pos)
+            }
+
+            float planeDist(rayDef ray) {
+                float3 normal = float3(0,1,0);
+                float DdotN = dot(ray.dir, normal);
+                return (DdotN? -dot(ray.pos, normal)/DdotN: 0);
+            }
+
+            intersection plane(float4x4 mat, rayDef ray) {
+                INTERSECTION(planeDist, planeNormal, mat, ray)
             }
 
             // a*pos.x + b*pos.y + c*pos.y = 0
@@ -281,38 +330,6 @@
                 float quartD = square(halfB) - a * c;
                 return quartD < 0? -1: (-halfB - sqrt(quartD))/a;
             }
-            
-            // //mat = inverse(mat);
-            // #define MATRIX_OPERATION_RAY(_varName, _funcName, _mat, _ray) rayDef _varName##_ray = ray; \
-            // float4x4 _mat##_i = inverse(_mat); \
-            // _varName##_ray.pos = mul(_mat##_i, float4(_varName##_ray.pos, 1)).xyz; \
-            // float3 _varName##_dir = mul(_mat##_i, float4(_varName##_ray.dir, 1)).xyz; \
-            // _varName##_ray.dir = normalize(_varName##_dir); \
-            // _varName = _funcName##(_varName##_ray)/length(_varName##_dir);
-
-            rayDef matrixApply(float4x4 mat, rayDef ray) {
-                // mat = inverse(mat);
-                ray.pos = mul(mat, float4(ray.pos, 1)).xyz;
-                ray.dir = mul(mat, float4(ray.dir, 1)).xyz;
-                return (ray, length(ray.dir));
-            }
-
-            float sphere(rayDef ray) {
-                return solveQuadraticHalf(
-                square(ray.dir),
-                dot(ray.dir, ray.pos),
-                square(ray.pos) - 0.25
-                );
-            }
-
-            #define NORMAL(_funcName, _pos)  float EPS = 0.0001; \
-            float def = _funcName##(pos); \
-            return normalize(float3( \
-            _funcName##(pos + float3(EPS,0,0)) - def, \
-            _funcName##(pos + float3(0,EPS,0)) - def, \
-            _funcName##(pos + float3(0,0,EPS)) - def \
-            ) \
-            );
 
             float sphereDef(float3 pos) {
                 // return square(pos.x) + square(pos.y) + square(pos.z) - 0.25;
@@ -321,26 +338,29 @@
             
             float3 sphereNormal(float3 pos){
                 NORMAL(sphereDef, pos)
-                // float EPS = 0.0001;
-                // float def = sphereDef(mat, pos);
-                // return normalize(float3(
-                // sphereDef(mat, pos + float3(EPS,0,0)) - def,
-                // sphereDef(mat, pos + float3(0,EPS,0)) - def,
-                // sphereDef(mat, pos + float3(0,0,EPS)) - def
-                // )
-                // );
             }
 
-            // float3 getSceneNormal(float3 pos){
-                //     float EPS = 0.0001;
-                //     float def = sceneDist(pos);
-                //     return normalize(float3(
-                //     sceneDef(pos + float3(EPS,0,0)) - def,
-                //     sceneDef(pos + float3(0,EPS,0)) - def,
-                //     sceneDef(pos + float3(0,0,EPS)) - def
-                //     )
-                //     );
-            // }
+            float sphereDist(rayDef ray) {
+                return solveQuadraticHalf(
+                square(ray.dir),
+                dot(ray.dir, ray.pos),
+                square(ray.pos) - 0.25
+                );
+            }
+
+            intersection sphere(float4x4 mat, rayDef ray) {
+                INTERSECTION(sphereDist, sphereNormal, mat, ray)
+                // intersection o;
+                // movedRay mray = matrixApply(mat, ray);
+                // o.dist = sphereDist(mray.ray);
+                // float3 pos = o.dist*mray.ray.dir + mray.ray.pos;
+                // o.dist /= mray.correction; 
+                // o.normal = (o.dist <= 0)? 0:
+                // mul(
+                // transpose(mat),
+                // float4(sphereNormal(pos),1)).xyz;
+                // return o;
+            }
 
             polarCoord polarSphere(direction dir) {
                 polarCoord o;
@@ -386,44 +406,93 @@
                 //     return distance;
             // }
 
-            struct intersection {
-                float dist;
-                float3 normal;
-            };
+            // bool foreground(float dist0, float dist1) {
+                //     // return true if dist0 is foreground, false if else.
+                //     return (0 < dist0 && 0 < dist1)? (dist0 < dist1): (dist1 < dist0);
+                //     // return 0 < dist0 && dist0 < dist1;
+            // }
+            intersection foreground(intersection b0, intersection b1) {
+                // return true if dist0 is foreground, false if else.
+                intersection o;
+                bool isB0 = (0 < b0.dist && 0 < b1.dist)? (b0.dist < b1.dist): (b1.dist < b0.dist);
+                o.dist = isB0? b0.dist: b1.dist;
+                o.normal = isB0? b0.normal: b1.normal;
+                return o;
+                // return 0 < dist0 && dist0 < dist1;
+            }
 
             intersection scene(rayDef ray) {
-                // sphere0 *= rotationMatrixCos(float3(0,1,0), _CosTime.x);
-                // sphere0 *= float4x4(_CosTime.x,0,_SinTime.x,0, 0,1,0,0, -_SinTime.x,0,_CosTime.x,0, 0,0,0,1);
                 
-                float4x4 sphere0 = IDMAT4;
-                //sphere0 = mul(sphere0, rotationMatrix(float3(0,_Time.y,0)));
-                // sphere0 = mul(sphere0, rodriguesMatrix(normalize(float3(1,1,0)), _Time.y));
-                // sphere0 = mul(sphere0,
-                // // scaleMatrix(_SinTime.yzw)
-                // scaleMatrix(float3(1,0.5,0.5))
-                // );
+                intersection plane0,
+                sphere0, sphere1;
+                float4x4 matPlane0 = IDMAT4,
+                matSphere0 = IDMAT4, matSphere1 = IDMAT4;
+                
+                matPlane0 -= shiftMatrix(float3(0,0,0));
+                plane0 = plane(matPlane0, ray);
 
-                sphere0 += shiftMatrix(float3(0.3,0,0));
-                sphere0 = mul(sphere0, scaleMatrix(float3(2,2,2)));
-                //ray.pos += spherePos;
-                //ray.pos = mul(ray.pos, rot);
-                // ray.pos = mul(float4(ray.pos, 1), rot);
-                //ray.dir = normalize(mul(ray.dir, rot));
-                float4x4 sphere1 = IDMAT4+shiftMatrix(float3(-0.3,0,0));
-                // sphere0 = mul(sphere0, rotationMatrix(float3(0,_Time.y,0));
-                // sphere1 = mul(sphere0, rodriguesMatrix(normalize(float3(-1,1,1)), _Time.y));
-                sphere1 = mul(sphere1, scaleMatrix(float3(0.5,0.5,0.5)));
+                matSphere0 = mul(matSphere0, scaleMatrix(float3(2,2,2)));
+                // matSphere0 += shiftMatrix(float3(0.3,0,0));
+                sphere0 = sphere(matSphere0, ray);
+                // posS0 = s0*sphere0.ray.dir + sphere0.ray.pos;
+                
+                matSphere1 -= shiftMatrix(float3(0,-0.5,0));
+                matSphere1 = mul(matSphere1, scaleMatrix(float3(2,2,1)));
+                sphere1 = sphere(matSphere1, ray);
+                // posS1 = s1*sphere1.ray.dir + sphere1.ray.pos;
+
                 intersection s;
-                float s0, s1;
-                rayDef ray0 = matrixApply(sphere0, ray);
-                float ray0Correct = length(ray.dir);
-                ray0.dir = ray.dir/ray0Correct;
-                s0 = sphere(ray0)/ray0Correct;
-                // MATRIX_OPERATION_RAY(s0, sphere, sphere0, ray)
-                // MATRIX_OPERATION_RAY(s1, sphere, sphere1, ray)
-                s.dist = s0;
-                s.normal = (mul(transpose(sphere0), sphereNormal(s.dist*ray0.dir + ray0.pos)));
+                
+                // bool isS0 = foreground(sphere0.dist,sphere1.dist);
+                // // if(isS0) {s = sphere0;} else {s = sphere1;}
+                // s = isS0? sphere0: sphere1;
+                s = foreground(plane0,
+                foreground(sphere0,sphere1)
+                )
+                ;
+                // s.dist = s1;
+                // float3 pos = isS0? posS0: posS1;
+                // float4x4 matScene = isS0? matSphere0: matSphere1;
+                // // float3 pos = posS1;
+                // s.normal = (0 < s.dist)?
+                // mul(
+                // transpose(matScene),
+                // float4(sphereNormal(pos),1)).xyz:
+                // 0;
                 return s;
+            }
+
+            fixed4 lighting(float3 pos, float3 normal, fixed shadow, fixed4 col) {
+                float3 lightDir;
+                #ifdef WORLD
+                    lightDir = _WorldSpaceLightPos0.xyz;
+                #elif defined(OBJECT)
+                    //ローカル座標で計算しているので、ディレクショナルライトの角度もローカル座標にする
+                    lightDir = mul(unity_WorldToObject, _WorldSpaceLightPos0).xyz;
+                #else
+                    lightDir = normalize(float3(1,-1,0));
+                #endif
+
+                // lightDir = normalize(mul(unity_WorldToObject,_WorldSpaceLightPos0)).xyz;
+                float NdotL = saturate(dot(normal, lightDir));
+
+                float3 lightProbe = ShadeSH9(fixed4(UnityObjectToWorldNormal(normal), 1));
+
+                float3 lighting = lerp(lightProbe, _LightColor0, NdotL);
+                
+                float3 ambient = Shade4PointLights(
+                unity_4LightPosX0, 
+                unity_4LightPosY0, 
+                unity_4LightPosZ0,
+                unity_LightColor[0].rgb, 
+                unity_LightColor[1].rgb, 
+                unity_LightColor[2].rgb, 
+                unity_LightColor[3].rgb,
+                unity_4LightAtten0, 
+                pos, 
+                normal);
+
+                return fixed4(shadow * lighting * col.rgb + (ambient? ambient: 0.1), col.a);
             }
 
             v2f vert (appdata v)
@@ -483,9 +552,8 @@
                     projectionPos = 1;
                 #endif
                 o.depth = projectionPos.z / projectionPos.w;
-
-                float NdotL = dot(normalize(_WorldSpaceLightPos0.xyz), p.normal);                
-                o.color = fixed4(NdotL*_Color.rgb, _Color.a);
+                // o.color = fixed4(1/p.dist,0,0,1);
+                o.color = lighting(pos, p.normal, 1, _Color);
                 return o;
             }
 
