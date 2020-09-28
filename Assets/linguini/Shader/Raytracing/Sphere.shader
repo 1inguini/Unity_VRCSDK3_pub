@@ -3,6 +3,7 @@
     Properties
     {
         _Color ("Color", Color) = (1,1,1)
+        _MaxDistance ("MaxDistance", Range(0,1)) = 0.1
     }
     SubShader
     {
@@ -23,13 +24,16 @@
             #include "UnityCG.cginc"
             #include "Lighting.cginc"
             
-            #define WORLD
+            // #define WORLD
+            #define OBJECT
 
             fixed4 _Color;
+            float _MaxDistance;
             
             #define EPS 0.0001
             #define INF 3.402823466e+38
-            
+            #define MAXDISTANCE 1000*_MaxDistance
+
             float4x4 IDMAT4 = {
                 {1,0,0,0}, 
                 {0,1,0,0},
@@ -62,15 +66,35 @@
                 return dot(v,v);
             }
 
-            float solveQuadratic(float a, float b, float c) {
-                float d = square(b) - 4*a*c;
-                return d < 0? -INF: (-b - sqrt(d))/(2*a);
-            }
+            // struct distFuncOut {
+                //     bool intersect;
+                //     float2 range;
+            // };
 
-            float solveQuadraticHalf(float a, float halfB, float c) {
-                float quartD = square(halfB) - a * c;
-                return quartD < 0? -INF: (-halfB - sqrt(quartD))/a;
-            }
+            // distFuncOut fail() {
+                //     distFuncOut o;
+                //     o.intersect = false;
+                //     o.range = float2(-INF, INF);
+                //     return o;
+            // }
+            
+            // distFuncOut solveQuadratic(float a, float b, float c) {
+                //     distFuncOut o;
+                //     float d = square(b) - 4*a*c;
+                //     o.intersect = 0 <= d;
+                //     o.range = !o.intersect? float2(-INF, INF):
+                //     float2((-b - sqrt(d))/(2*a), (-b + sqrt(d))/(2*a));
+                //     return o;
+            // }
+
+            // distFuncOut solveQuadraticHalf(float a, float halfB, float c) {
+                //     distFuncOut o;
+                //     float quartD = square(halfB) - a*c;
+                //     o.intersect = 0 <= quartD;
+                //     o.range = !o.intersect? float2(-INF, INF):
+                //     (-halfB + float2(-1, 1)*sqrt(quartD))/a;
+                //     return o;
+            // }
             
             // // http://answers.unity.com/answers/641391/view.html
             // float4x4 inverse(float4x4 input)
@@ -169,6 +193,36 @@
                 return scaleMatrix(scale.x, scale.y, scale.z);
             }
 
+            // float4x4 scaleGloballyMatrix(float4x4 mat, float x, float y, float z) {
+                //     mat[0][0] *= x;
+                //     mat[3][0] *= x;
+
+                //     mat[1][1] *= y;
+                //     mat[3][1] *= y;
+                
+                //     mat[2][2] *= z;
+                //     mat[3][2] *= z;
+                //     return mat;
+            // }
+            // float4x4 scaleGloballyMatrix(float4x4 mat, float3 scale) {
+                //     return scaleGloballyMatrix(mat, scale.x, scale.y, scale.z);
+            // }
+            
+            float4x4 scaleLocalMatrix(float4x4 mat, float x, float y, float z) {
+                mat[0][0] *= x;
+                mat[3][0] /= x;
+
+                mat[1][1] *= y;
+                mat[3][1] /= y;
+                
+                mat[2][2] *= z;
+                mat[3][2] /= z;
+                return mat;
+            }
+            float4x4 scaleLocalMatrix(float4x4 mat, float3 scale) {
+                return scaleLocalMatrix(mat, scale.x, scale.y, scale.z);
+            }
+
             struct appdata
             {
                 float4 vertex : POSITION;
@@ -191,40 +245,73 @@
                 float3 dir;
             };
 
-            // struct movedRay{
-                //     rayDef ray;
-                //     float correction;
-            // };            
+            rayDef mkray(float3 pos, float3 dir) {
+                rayDef o;
+                o.pos = pos;
+                o.dir = dir;
+                return o;
+            }
+
+            struct movedRay{
+                rayDef ray;
+                float correction;
+            };            
             
-            // movedRay matrixApply(float4x4 mat, rayDef ray) {
-                //     movedRay o;
+            movedRay matrixApply(float4x4 mat, rayDef ray) {
+                movedRay o;
+                // mat = inverse(mat);
+                o.ray.pos = mul(mat, float4(ray.pos, 1)).xyz;
+                o.ray.dir = mul(mat, ray.dir);
+                o.correction = length(o.ray.dir);
+                o.ray.dir /= o.correction;
+                return o;
+            }
+            
+            // rayDef matrixApply(float4x4 mat, rayDef ray) {
                 //     // mat = inverse(mat);
-                //     o.ray.pos = mul(mat, float4(ray.pos, 1)).xyz;
-                //     o.ray.dir = mul(mat, ray.dir).xyz;
-                //     o.correction = length(o.ray.dir);
-                //     o.ray.dir /= o.correction;
+                //     ray.pos = mul(mat, float4(ray.pos, 1)).xyz;
+                //     ray.dir = mul(mat, ray.dir).xyz;
+                //     return ray;
+            // }
+
+            struct intersection {
+                bool intersect;
+                bool surface; // index for "float2 range" that indicates surface.
+                float2 range; // range.x < 0 < range.y when inside, 0 < range.x < range.y when outside 
+                float3 normal;
+            };
+
+            float3 getPos(rayDef ray, float2 range) {
+                return range[range[0] < 0]*ray.dir + ray.pos;
+            }
+
+            // intersection emptyIntersection(){
+                //     intersection o;
+                //     o.intersect = false;
+                //     o.range = float2(-INF, INF);
+                //     o.normal = 0;
                 //     return o;
             // }
             
-            rayDef matrixApply(float4x4 mat, rayDef ray) {
-                // mat = inverse(mat);
-                ray.pos = mul(mat, float4(ray.pos, 1)).xyz;
-                ray.dir = mul(mat, ray.dir).xyz;
-                return ray;
-            }
-
-            struct intersection {
-                float t;
-                float3 normal;
-            };
-            
             struct bodyDef {
+                intersection i;
                 uint base; // 0:plane 1:sphere 2:cube
                 float4x4 mat;
                 rayDef ray;
-                float3 pos;
-                float3 normal;
             };
+
+            float surface(bodyDef b) {
+                // return b.i.range[b.i.range[0] < 0];
+                return b.i.range[b.i.surface];
+            }
+
+            bodyDef stepBody(bodyDef body);
+            float backside(bodyDef b) {
+                // b.i.range[0] = b.i.range[!(b.i.range[0] < 0 || b.i.inside)];
+                bodyDef next = stepBody(b);
+                return b.i.surface? next.i.range[next.i.range[0] < 0]: b.i.range[1];
+                // return b.i.range[0];
+            }
 
             #define PLANE 0
             #define SPHERE 1
@@ -237,100 +324,145 @@
             PROTOTYPE_BODY(cube)
 
             bodyDef runBody(bodyDef body) {
-                rayDef ray = matrixApply(body.mat, body.ray);
+                movedRay mray = matrixApply(body.mat, body.ray);
+                [call] switch(body.base){
+                    case 0: {body.i = plane(mray.ray); break;}
+                    case 1: {body.i = sphere(mray.ray); break;}
+                    case 2: {body.i = cube(mray.ray); break;}
+                }
+                body.i.range /= mray.correction;
+                body.i.normal = mul(transpose(body.mat), float4(body.i.normal, 1)).xyz;
+                return body;
+            };
+            
+            bodyDef stepBody(bodyDef body) {
+                float t = body.i.range[body.i.range[0] < 0] + EPS;
+                float3 pos = getPos(body.ray, t);
+                movedRay mray = matrixApply(body.mat, mkray(pos, body.ray.dir));
                 intersection i;
                 [call] switch(body.base){
-                    case 0: {i = plane(ray); break;}
-                    case 1: {i = sphere(ray); break;}
-                    case 2: {i = cube(ray); break;}
+                    case 0: {body.i = plane(mray.ray); break;}
+                    case 1: {body.i = sphere(mray.ray); break;}
+                    case 2: {body.i = cube(mray.ray); break;}
                 }
-                body.pos = i.t*body.ray.dir + body.ray.pos;
-                body.normal = mul(transpose(body.mat), float4(i.normal, 1)).xyz;
+                // body.i.intersect = i.intersect;
+                body.i.range = t + body.i.range/mray.correction;
+                body.i.normal = mul(transpose(body.mat), float4(body.i.normal, 1)).xyz;
                 return body;
             };
             
             bodyDef initBody(uint base, float4x4 mat, rayDef ray) {
                 bodyDef o;
+                o.i.intersect = false;
+                o.i.surface = false;
+                o.i.range = 0;
+                o.i.normal = 0;
                 o.base = base;
                 o.mat = mat;
                 o.ray = ray;
-                o.pos = ray.pos;
-                o.normal = 0;
                 o = runBody(o);
                 return o;
             }
 
-            float getDist(bodyDef b){
-                return sign(dot(b.pos - b.ray.pos, b.ray.dir))*distance(b.pos, b.ray.pos);
-                // return
-                // (b.ray.dir.x?
-                // (b.i.pos.x - b.ray.pos.x)/b.ray.dir.x:
-                // (b.ray.dir.y?
-                // (b.i.pos.y - b.ray.pos.y)/b.ray.dir.y:
-                // ((b.i.pos.z - b.ray.pos.z)/b.ray.dir.z)));
+            bodyDef noBody() {
+                bodyDef o;
+                o.i.intersect = false;
+                o.i.surface = false;
+                o.i.range = float2(-INF, INF);
+                o.i.normal = 0;
+                o.base = 0;
+                o.mat = 0;
+                o.ray.dir = 0;
+                o.ray.pos = 0;
+                return o;
             }
 
+
+            // float getDist(bodyDef b){
+                //     return sign(dot(b.pos - b.ray.pos, b.ray.dir))*distance(b.pos, b.ray.pos);
+                //     // return
+                //     // (b.ray.dir.x?
+                //     // (b.i.pos.x - b.ray.pos.x)/b.ray.dir.x:
+                //     // (b.ray.dir.y?
+                //     // (b.i.pos.y - b.ray.pos.y)/b.ray.dir.y:
+                //     // ((b.i.pos.z - b.ray.pos.z)/b.ray.dir.z)));
+            // }
+
+            // float getDist(bodyDef b){
+                //         return sign(dot(b.pos - b.ray.pos, b.ray.dir))*distance(b.pos, b.ray.pos);
+            // }
+
             bodyDef not(bodyDef b) {
-                // b.i.dist *= -1;
-                b.pos -= 2*(b.pos - b.ray.pos);
-                b.normal *= -1;
+                b.i.surface = !b.i.surface;
+                // b.i.intersect = !b.i.intersect;
+                // b.i.t *= -1;
+                b.i.normal *= -1;
+                // b.ray.dir *= -1;
                 return b;
             }
 
+            // bodyDef or(bodyDef b[2]) {
+                //     // return b0 if b0 is foreground, b1 if else.
+                //     bool isB1 = (b[0].i.intersect && b[1].i.intersect)?
+                //     (b[1].i.range.x < b[0].i.range.x):
+                //     (b[1].i.intersect);
+                //     return b[isB1];
+            // }
             bodyDef or(bodyDef b[2]) {
-                // return b0 if b0 is foreground, b1 if else.
-                float dist[2] = { getDist(b[0]), getDist(b[1]) };
-                bool isB0 = (0 < dist[0] && 0 < dist[1])? (dist[0] < dist[1]): (dist[1] < dist[0]);
-                return b[!isB0];
+                // // return b0 if b0 is foreground, b1 if else.
+                // float surfaces[2] = { b[0].i.range[b[0].i.range[0] < 0], b[1].i.range[b[1].i.range[0] < 0] };
+                // return b[
+                // (b[0].i.intersect && b[1].i.intersect)?
+                // (surfaces[1] < surfaces[0]):
+                // (b[1].i.intersect)
+                // ];
+                return b[
+                b[1].i.intersect &&
+                surface(b[1]) < surface(b[0])
+                ];
             }
             bodyDef or(bodyDef b0, bodyDef b1) {
                 bodyDef b[2] = {b0, b1};
                 return or(b);
             }
+            bodyDef or3(bodyDef b[3]) {
+                return or(b[0], or(b[1], b[2]));
+            }
 
-            // bodyDef and(bodyDef b[2]) {
-                //     // return b0 if b0 is foreground, b1 if else.
-                //     float dist[2] = { getDist(b[0]), getDist(b[1]) };
-                //     bool isB[2];
-                //     isB[0] = (0 < dist[0] && dist[0] < dist[1]);
-                //     isB[1] = (0 < dist[1] && dist[1] < dist[0]);
-                //     b0.pos = isB[0]? b[0].pos:(isB[1]? b[1].pos: -1);
-                //     b0.normal = isB[0]? b0.normal: b1.normal;
-                //     return b0;
-            // }
+            bodyDef or3(bodyDef b0, bodyDef b1, bodyDef b2) {
+                return or(b0, or(b1, b2));
+            }
 
-            // intersection not(intersection b) {
-                //     b.dist *= -1;
-                //     b.normal *= -1;
-                //     return b;
-            // }
+            bodyDef and(bodyDef b[2]) {
+                bodyDef buf[2]= { noBody(), noBody() };// = { runBody(b[0]), runBody(b[1]) };
+                float surf;
+                bodyDef check[2] = { noBody(), b[0]};
+                surf = surface(b[0]);
+                buf[0] = check[
+                b[1].i.intersect && (
+                // (b[1].i.range[0] < surf && surf < b[1].i.range[1])
+                surface(b[1]) < surface(b[0]) && surface(b[0]) < backside(b[1])
+                )
+                ];
 
-            // intersection or(intersection b0, intersection b1) {
-                //     // return b0 if b0 is foreground, b1 if else.
-                //     bool isB0 = (0 < b0.dist && 0 < b1.dist)? (b0.dist < b1.dist): (b1.dist < b0.dist);
-                //     b0.dist = isB0? b0.dist: b1.dist;
-                //     b0.normal = isB0? b0.normal: b1.normal;
-                //     return b0;
-            // }
-            
-            // intersection and(intersection b0, intersection b1) {
-                //     // return b0 if b0 is foreground, b1 if else.
-                //     bool2 isB;
-                //     isB[0] = (0 < b0.dist && b0.dist < b1.dist);
-                //     isB[1] = (0 < b1.dist && b1.dist < b0.dist);
-                //     b0.dist = isB[0]? b0.dist:(isB[1]? b1.dist: -1);
-                //     b0.normal = isB[0]? b0.normal: b1.normal;
-                //     return b0;
-            // }
+                check[1] = b[1];
+                surf = surface(b[1]);
+                buf[1] = check[
+                b[0].i.intersect && (
+                // (b[0].i.range[0] < surf && surf < b[0].i.range[1])
+                surface(b[0]) < surface(b[1]) && surface(b[1]) < backside(b[0])
+                )
+                ];
 
-            // intersection max(intersection b0, intersection b1) {
-                //     // return b0 if b0 is foreground, b1 if else.
-                //     bool isB0 = (0 < b0.dist && 0 < b1.dist)? (b0.dist < b1.dist): (b1.dist < b0.dist);
-                //     b0.dist = isB0? b0.dist: b1.dist;
-                //     b0.normal = isB0? b0.normal: b1.normal;
-                //     return b0;
-            // }
-
+                return or(buf);
+            }
+            bodyDef and(bodyDef b0, bodyDef b1) {
+                bodyDef b[2] = {b0, b1};
+                return and(b);
+            }
+            bodyDef and3(bodyDef b0, bodyDef b1, bodyDef b2) {
+                return and(b0, and(b1, b2));
+            }
 
             #define NORMAL_FUNC(_bodyName) float3 _bodyName##Normal(float3 pos) { \
                 float def = _bodyName##Def(pos); \
@@ -342,27 +474,41 @@
                 ); \
             }
 
-            #define INTERSECTION_FUNC(_bodyName) intersection _bodyName##(rayDef ray) { \
-                intersection o; \
-                o.t = _bodyName##Dist(ray); \
-                o.normal = _bodyName##Normal(o.t*ray.dir + ray.pos); \
-                return o; \
-            }
+            // #define INTERSECTION_FUNC(_bodyName) intersection _bodyName##(rayDef ray) { \
+                //     intersection o; \
+                //     distFuncOut dfo = _bodyName##Dist(ray); \
+                //     o.intersect = dfo.intersect; \
+                //     o.range = dfo.range; \
+                //     o.normal = _bodyName##Normal(o.range[o.range[0] < 0]*ray.dir + ray.pos); \
+                //     return o; \
+            // }
 
             // float planeDef(float3 normal, float3 pos) {
                 //     return dot(normal, pos);
             // }
 
-            inline float planeFromNormalDist(float3 normal, rayDef ray) {
+
+
+            intersection planeFromNormal(float3 normal, rayDef ray) {
+                intersection o;
                 float DdotN = dot(ray.dir, normal);
-                return -dot(ray.pos, normal)/(DdotN? DdotN: 1);
+                float PdotN = dot(ray.pos, normal);
+                o.intersect = DdotN != 1;
+                o.surface = 0 <= PdotN;
+                float t = -PdotN/(DdotN? DdotN: 1);
+                o.range[0] = o.surface? -INF: t;
+                o.range[1] = o.surface? t: INF;
+                o.normal = normal;
+                return o;
             }
 
             intersection plane(rayDef ray) {
-                intersection o;
-                o.normal = float3(0,sign(ray.pos.y),0);
-                o.t = planeFromNormalDist(o.normal, ray);
-                return o;
+                // intersection o;
+                // o.normal = float3(0,sign(ray.pos.y),0);
+                // distFuncOut dfo = planeDistFromNormal(o.normal, ray);
+                // o.intersect = 0 <= o.range;
+                // return o;
+                return planeFromNormal(float3(0,1,0), ray);
             }
 
             // float sphereDef(float3 pos) {
@@ -374,15 +520,31 @@
                 return normalize(pos - 0);
             }
 
-            float sphereDist(rayDef ray) {
-                return solveQuadraticHalf(
-                square(ray.dir),
-                dot(ray.dir, ray.pos),
-                square(ray.pos) - 0.25
-                );
+            // distFuncOut sphereDist(rayDef ray) {
+                //     float DdotP = dot(ray.dir, ray.pos);
+                //     distFuncOut check[2] = {
+                    //         fail(),
+                    //         solveQuadraticHalf(
+                    //         1, //square(ray.dir),
+                    //         DdotP,
+                    //         square(ray.pos) - 0.25
+                    //         )
+                //     };
+                //     return check[DdotP < 0];
+            // }
+            intersection sphere(rayDef ray) {
+                intersection o;
+                float DdotP = dot(ray.dir, ray.pos);
+                float quartD = square(DdotP) - (square(ray.pos) - 0.25);
+                o.intersect = 0 <= quartD && DdotP < 0;
+                o.range = !o.intersect? float2(-INF, INF):
+                (-DdotP + float2(-1, 1)*sqrt(quartD));
+                
+                o.surface = o.range[0] < 0;
+                o.normal = sphereNormal(getPos(ray, o.range));
+                return o;
             }
-
-            INTERSECTION_FUNC(sphere)
+            // INTERSECTION_FUNC(sphere)
             // intersection sphere(float4x4 mat, rayDef ray) {
                 //     INTERSECTION(sphereDist, sphereNormal, mat, ray)
                 //     // intersection o;
@@ -407,7 +569,28 @@
                 return normalize(step(pos, 0.5-EPS));
             }
 
-            float cubeDist(rayDef ray) {
+            // distFuncOut cubeDist(rayDef ray) {
+                //     float2 buf;
+                //     float3 tmin, tmax;
+                //     #define SOLVE(i) \
+                //     buf[0] = (0.5 - ray.pos.i)/ray.dir.i; \
+                //     buf[1] = -(0.5 + ray.pos.i)/ray.dir.i; \
+                //     tmin.i = max(0, min(buf[0],buf[1])); \
+                //     tmax.i = max(buf[0],buf[1]);
+                //     SOLVE(x)
+                //     SOLVE(y)
+                //     SOLVE(z)
+                //     #undef SOLVE
+                //     float2 tbound = float2(max3(tmin), min3(tmax));
+                //     distFuncOut o;
+                //     o.intersect = tbound[0] < tbound[1];
+                //     o.range = float2(tbound);
+                //     o.range.xy = !o.intersect? float2(-INF, INF): o.range.xy;
+                //     return o;
+            // }
+            // INTERSECTION_FUNC(cube)
+            
+            intersection cube(rayDef ray) {
                 float2 buf;
                 float3 tmin, tmax;
                 #define SOLVE(i) \
@@ -415,25 +598,95 @@
                 buf[1] = -(0.5 + ray.pos.i)/ray.dir.i; \
                 tmin.i = max(0, min(buf[0],buf[1])); \
                 tmax.i = max(buf[0],buf[1]);
+                
                 SOLVE(x)
                 SOLVE(y)
                 SOLVE(z)
                 #undef SOLVE
                 float2 tbound = float2(max3(tmin), min3(tmax));
-                return tbound[1] < tbound[0]? -1: tbound[0];
+                intersection o;
+                o.intersect = tbound[0] < tbound[1];
+                o.range = !o.intersect? float2(-INF, INF): tbound;
+                o.surface = o.range[0] < 0;
+                o.normal = cubeNormal(getPos(ray, o.range));
+                return o;
             }
 
-            INTERSECTION_FUNC(cube)
 
             float torusDef(float3 pos) {
-                return distance((length(pos.xy) - 0.1), pos.z) - 0.25;
+                return distance((length(pos.xy) - 0.25), pos.z) - 0.01;
                 // return square(sqrt(square(pos.x) + square(pos.y)) - 0.1) + square(pos.z) - 0.25;
             }
             NORMAL_FUNC(torus)
             
+            bodyDef mengerFold(bodyDef body) {
+                // body.mat = mul(body.mat, scaleMatrix(3));
+                body.mat = scaleLocalMatrix(body.mat, 3);
+                float div3 = 1.0/3.0;
+
+                bodyDef corners[3][4], edges[2][4]; 
+                [unroll] for (uint i = 0; i < 4; i++) {
+                    corners[0][i] = body;
+                    corners[1][i] = body;
+                    corners[2][i] = body;
+                    edges[0][i] = body;
+                    edges[1][i] = body;
+                    
+                    corners[0][i].mat -= shiftMatrix(0, 1, 0);
+                    corners[2][i].mat -= shiftMatrix(0, -1, 0);
+                    edges[0][i].mat -= shiftMatrix(0, 1, 0);
+                    edges[1][i].mat -= shiftMatrix(0, -1, 0);
+                }
+                [unroll] for (uint i = 0; i < 3; i++) {
+                    corners[i][0].mat -= shiftMatrix(1, 0, 1);
+                    corners[i][1].mat -= shiftMatrix(-1, 0, 1);
+                    corners[i][2].mat -= shiftMatrix(1, 0, -1);
+                    corners[i][3].mat -= shiftMatrix(-1, 0, -1);
+                }
+                [unroll] for (uint i = 0; i < 2; i++) {
+                    edges[i][0].mat -= shiftMatrix(1, 0, 0);
+                    edges[i][1].mat -= shiftMatrix(0, 0, 1);
+                    edges[i][2].mat -= shiftMatrix(-1, 0, 0);
+                    edges[i][3].mat -= shiftMatrix(0, 0, -1);
+                }
+                
+                [unroll] for (uint i = 0; i < 4; i++) {
+                    corners[0][i] = runBody(corners[0][i]);
+                    corners[1][i] = runBody(corners[1][i]);
+                    corners[2][i] = runBody(corners[2][i]);
+                    edges[0][i] = runBody(edges[0][i]);
+                    edges[1][i] = runBody(edges[1][i]);
+                }
+                
+                [unroll] for (uint i = 0; i < 3; i++) {
+                    corners[i][0] = or(
+                    or(corners[i][0], corners[i][1]),
+                    or(corners[i][2], corners[i][3])
+                    );
+                }
+                [unroll] for (uint i = 0; i < 2; i++) {
+                    edges[i][0] = or(
+                    or(edges[i][0], edges[i][1]),
+                    or(edges[i][2], edges[i][3])
+                    );
+                }
+                return or(
+                or3(corners[0][0], corners[1][0], corners[2][0]),
+                or(edges[0][0], edges[1][0])
+                );
+            }
+
+            // pass cube and make menger sponge // failing
+            bodyDef menger(bodyDef body) {
+                for (uint i = 0; i < 2; i++) {
+                    body = mengerFold(body);
+                }
+                return body;
+            } 
+
             bodyDef scene(rayDef ray) {
                 
-                bodyDef plane0, cube0, sphere0, sphere1;
+                bodyDef plane0, cube0, cube1, sphere0, sphere1;
                 float4x4 mat = IDMAT4;
                 
                 mat -= shiftMatrix(float3(0,-0.5,0));
@@ -443,23 +696,41 @@
                 mat = IDMAT4;
 
                 // mat -= shiftMatrix(0.3,0,0);
-                // mat = mul(mat, scaleMatrix(2,2,2));
+                mat -= shiftMatrix(-0.2);
+                mat = mul(mat, scaleMatrix(2,2,2));
                 cube0 = initBody(CUBE, mat, ray);
+                // cube0.mat -= shiftMatrix(float3(1,0,0));
+                // cube0 = runBody(cube0);
                 mat = IDMAT4;
                 
-                mat = mul(mat, scaleMatrix(float3(1,2,2)));
+
+                mat = mul(mat, scaleMatrix(1,1,1));
+                mat -= shiftMatrix(0.3);
+                cube1 = initBody(CUBE, mat, ray);
+                // cube0 = runBody(cube0);
+                mat = IDMAT4;
+                
+                mat = mul(mat, scaleMatrix(float3(2,2,1)));
                 // mat += shiftMatrix(float3(0.3,0,0));
                 // sphere0 = sphere(mat, ray);
                 sphere0 = initBody(SPHERE, mat, ray);
+                // sphere0.mat -= shiftMatrix(float3(0.3,0,0));
+                // sphere0 = runBody(sphere0);
                 mat = IDMAT4;
 
                 mat -= shiftMatrix(float3(0,0.3,0));
-                mat = mul(mat, scaleMatrix(float3(2,2,1)));
+                mat = mul(mat, scaleMatrix(float3(2,2,2)));
                 // sphere1 = sphere(mat, ray);
                 sphere1 = initBody(SPHERE, mat, ray);
 
-                // return or(sphere0, sphere1);
-                return cube0;
+                return and(cube0, not(cube1));
+                // return and(sphere0, sphere1);
+                // return sphere1;
+                // return not(cube0);
+                // return or(cube0, or(sphere0, sphere1));
+                // return or(not(sphere0), sphere1);
+                // return and(cube0, or(sphere0, sphere1));
+                // return runBody(not(sphere0));
             }
 
             fixed4 lighting(float3 pos, float3 normal, fixed shadow, fixed4 col) {
@@ -537,10 +808,10 @@
                 // float4x4 rayCoord = addShift(dir2zAxis(rayDirV), -pos);
                 bodyDef p = scene(ray);
 
-                clip(getDist(p));
+                if(!p.i.intersect) discard;
                 
-                // float4 pos = float4(p.dist*ray.dir + ray.pos, 1); 
-                float4 pos = float4(p.pos, 1); 
+                float4 pos = float4((p.i.range.x < 0? p.i.range.y: p.i.range.x)*ray.dir + ray.pos, 1); 
+                // float4 pos = float4(p.pos, 1); 
                 float4 projectionPos;
                 #if defined(WORLD)
                     projectionPos = UnityWorldToClipPos(pos);
@@ -551,7 +822,7 @@
                 #endif
                 o.depth = projectionPos.z / projectionPos.w;
                 // o.color = fixed4(1/p.dist,0,0,1);
-                o.color = lighting(pos, p.normal, 1, _Color);
+                o.color = lighting(pos, p.i.normal, 1, _Color);
                 return o;
             }
 
