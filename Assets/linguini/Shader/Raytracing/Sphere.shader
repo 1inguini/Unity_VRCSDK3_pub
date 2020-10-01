@@ -1,4 +1,6 @@
-﻿Shader "linguini/Raytracing/Sphere"
+﻿//  Copyright (c) 2020 linguini. MIT license
+
+Shader "linguini/Raytracing/Sphere"
 {
     Properties
     {
@@ -9,6 +11,7 @@
     {
         Pass
         {
+            Name "Raytrace"
             Tags { "LightMode" = "ForwardBase" }
             LOD 100
             Cull Front
@@ -24,8 +27,8 @@
             #include "UnityCG.cginc"
             #include "Lighting.cginc"
             
-            // #define WORLD
-            #define OBJECT
+            #define WORLD
+            // #define OBJECT
 
             fixed4 _Color;
             float _MaxDistance;
@@ -41,10 +44,6 @@
                 {0,0,0,1}
             };
             
-            float inf2neg(float x) {
-                return INF <= x? -1: x;
-            }
-
             float min3(float x, float y, float z){
                 return min(x, min(y, z));
             }
@@ -66,67 +65,6 @@
                 return dot(v,v);
             }
 
-            // struct distFuncOut {
-                //     bool intersect;
-                //     float2 range;
-            // };
-
-            // distFuncOut fail() {
-                //     distFuncOut o;
-                //     o.intersect = false;
-                //     o.range = float2(-INF, INF);
-                //     return o;
-            // }
-            
-            // distFuncOut solveQuadratic(float a, float b, float c) {
-                //     distFuncOut o;
-                //     float d = square(b) - 4*a*c;
-                //     o.intersect = 0 <= d;
-                //     o.range = !o.intersect? float2(-INF, INF):
-                //     float2((-b - sqrt(d))/(2*a), (-b + sqrt(d))/(2*a));
-                //     return o;
-            // }
-
-            // distFuncOut solveQuadraticHalf(float a, float halfB, float c) {
-                //     distFuncOut o;
-                //     float quartD = square(halfB) - a*c;
-                //     o.intersect = 0 <= quartD;
-                //     o.range = !o.intersect? float2(-INF, INF):
-                //     (-halfB + float2(-1, 1)*sqrt(quartD))/a;
-                //     return o;
-            // }
-            
-            // // http://answers.unity.com/answers/641391/view.html
-            // float4x4 inverse(float4x4 input)
-            // {
-                //     #define minor(a,b,c) determinant(float3x3(input.a, input.b, input.c))
-                //     //determinant(float3x3(input._22_23_23, input._32_33_34, input._42_43_44))
-                
-                //     float4x4 cofactors = float4x4(
-                //     minor(_22_23_24, _32_33_34, _42_43_44), 
-                //     -minor(_21_23_24, _31_33_34, _41_43_44),
-                //     minor(_21_22_24, _31_32_34, _41_42_44),
-                //     -minor(_21_22_23, _31_32_33, _41_42_43),
-                
-                //     -minor(_12_13_14, _32_33_34, _42_43_44),
-                //     minor(_11_13_14, _31_33_34, _41_43_44),
-                //     -minor(_11_12_14, _31_32_34, _41_42_44),
-                //     minor(_11_12_13, _31_32_33, _41_42_43),
-                
-                //     minor(_12_13_14, _22_23_24, _42_43_44),
-                //     -minor(_11_13_14, _21_23_24, _41_43_44),
-                //     minor(_11_12_14, _21_22_24, _41_42_44),
-                //     -minor(_11_12_13, _21_22_23, _41_42_43),
-                
-                //     -minor(_12_13_14, _22_23_24, _32_33_34),
-                //     minor(_11_13_14, _21_23_24, _31_33_34),
-                //     -minor(_11_12_14, _21_22_24, _31_32_34),
-                //     minor(_11_12_13, _21_22_23, _31_32_33)
-                //     );
-                //     #undef minor
-                //     return transpose(cofactors) / determinant(input);
-            // }
-
             float4x4 rodriguesMatrixCosSin(float3 n, float cosT, float sinT) {
                 float3 sq = float3(n.x*n.x, n.y*n.y, n.z*n.z);
                 float3 adj = float3(n.x*n.y, n.y*n.z, n.z*n.x);
@@ -138,18 +76,15 @@
                 0, 0, 0, 1
                 );
             }
-
             float4x4 rodriguesMatrix(float3 n, float theta) {
                 float sinT = sin(theta);
                 float cosT = cos(theta);
                 return rodriguesMatrixCosSin(n,cosT,sinT);
             }
-
             float4x4 rodriguesMatrixCos(float3 n, float cosT) {
                 float sinT = sqrt(1-square(cosT));
                 return rodriguesMatrixCosSin(n,cosT,sinT);
             }
-
 
             float4x4 rotationMatrix(float x, float y, float z) {
                 float s, c;
@@ -164,6 +99,7 @@
                 o = mul(o, float4x4(c,-s,0,0, s,c,0,0, 0,0,1,0, 0,0,0,1));
                 return o;                
             }
+
             float4x4 rotationMatrix(float3 thetas) {
                 return rotationMatrix(thetas.x, thetas.y, thetas.z);                
             }
@@ -236,7 +172,7 @@
 
             struct fragout
             {
-                fixed4 color : SV_Target;
+                float4 color : SV_Target;
                 float depth : SV_Depth;
             };
             
@@ -563,11 +499,11 @@
                 return max3(abs(pos)) - 0.5;
             }
 
-            // NORMAL_FUNC(cube)
+            NORMAL_FUNC(cube)
 
-            float3 cubeNormal(float3 pos) {
-                return normalize(step(pos, 0.5-EPS));
-            }
+            // float3 cubeNormal(float3 pos) {
+            //     return normalize(step(pos, 0.5-EPS));
+            // }
 
             // distFuncOut cubeDist(rayDef ray) {
                 //     float2 buf;
@@ -722,8 +658,9 @@
                 mat = mul(mat, scaleMatrix(float3(2,2,2)));
                 // sphere1 = sphere(mat, ray);
                 sphere1 = initBody(SPHERE, mat, ray);
+                mat = IDMAT4;
 
-                return and(cube0, not(cube1));
+                return or(cube0, (cube1));
                 // return and(sphere0, sphere1);
                 // return sphere1;
                 // return not(cube0);
@@ -731,6 +668,27 @@
                 // return or(not(sphere0), sphere1);
                 // return and(cube0, or(sphere0, sphere1));
                 // return runBody(not(sphere0));
+            }
+
+            bodyDef demoScene(rayDef ray) {
+                float4x4 mat = IDMAT4;
+                bodyDef cube[1], sphere[2];
+                
+                mat = mul(mat, scaleMatrix(2.5));
+                mat = mul(mat, rotationMatrix(_Time.x/2, _Time.y/2, _Time.z/2));
+                cube[0] = initBody(CUBE, mat, ray);
+                mat = IDMAT4;
+
+                mat = mul(mat, scaleMatrix(3/(_CosTime.y + 2), 3/(_CosTime.z + 2), 3/(_CosTime.w + 2)));
+                sphere[0] = initBody(SPHERE, mat, ray);
+                mat = IDMAT4;
+
+                mat -= shiftMatrix(0.5,0,0);
+                mat = mul(mat, rodriguesMatrix(normalize((rodriguesMatrix(normalize(float3(1,_SinTime.w,0)), _Time.y), float3(0,1,-1))), _Time.y));
+                mat = mul(mat, scaleMatrix(1.5,1.5,1.5));
+                sphere[1] = initBody(SPHERE, mat, ray);
+
+                return or(cube[0], or(sphere));
             }
 
             fixed4 lighting(float3 pos, float3 normal, fixed shadow, fixed4 col) {
@@ -806,7 +764,8 @@
                 ray.dir = normalize(i.pos.xyz - ray.pos);
 
                 // float4x4 rayCoord = addShift(dir2zAxis(rayDirV), -pos);
-                bodyDef p = scene(ray);
+                // bodyDef p = scene(ray);
+                bodyDef p = demoScene(ray);
 
                 if(!p.i.intersect) discard;
                 
@@ -820,8 +779,8 @@
                 #else
                     projectionPos = 1;
                 #endif
+
                 o.depth = projectionPos.z / projectionPos.w;
-                // o.color = fixed4(1/p.dist,0,0,1);
                 o.color = lighting(pos, p.i.normal, 1, _Color);
                 return o;
             }

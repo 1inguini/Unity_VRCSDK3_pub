@@ -9,6 +9,7 @@
         _Size ("Size", Range(0,1)) = 1
         _MaxDistance ("MaxDistance", Range(0,1)) = 0.1
         _Resolution ("Resolution", Range(0,1)) = 0.3
+        _CubeType ("CubeType", Int) = 0
     }
     SubShader
     {
@@ -33,6 +34,8 @@
             float sceneDist(float3 pos);
             #include "Raymarching.cginc"
             
+            uint _CubeType;
+
             float3 mengerizeXPos(float3 pos, float offset) {
                 pos.yz = abs(pos.yz);
 
@@ -100,10 +103,70 @@
                 // return dist;
                 return max(cube, -dist);
                 // return max(cube, -pillarXDist(pos)/9);
+            }            
+            
+            float3 mengerFold(float3 z) {
+                float a = min(z.x - z.y, 0.0);
+                z.x -= a;
+                z.y += a;
+                a = min(z.x - z.z, 0.0);
+                z.x -= a;
+                z.z += a;
+                a = min(z.y - z.z, 0.0);
+                z.y -= a;
+                z.z += a;
+                return z;
             }
             
+            float3 boxFold (float3 pos) {
+                return clamp(pos, -1, 1) * 2 - pos;
+            }
+
+            float dot2 (float3 x) {
+                return dot(x,x);
+            }
+
+            #define minRadius2 0.25
+            #define fixedRadius2 1.9
+
+            float sphereFold (float3 pos) {
+                float r2 = dot(pos, pos);
+                return // r2 < minRadius2? fixedRadius2/minRadius2: // linear inner scaling
+                // (r2 < fixedRadius2 ?
+                max(1, fixedRadius2/max(r2,minRadius2))//: // this is the actual sphere inversion
+                // 1)
+                ;
+            }
+
+            float mandelBoxDist(float3 pos) {
+                float3 initPos = pos;
+                uint maxLevel = 5 + _Resolution * 10;
+                float scale = -2.5;//_SinTime.y;
+                float offset = 1;
+                float coef = 1;
+                float r;
+                for (uint i = 0; i < maxLevel; i++) {
+                    pos = boxFold(pos);
+                    coef = sphereFold(pos);
+                    pos *= coef;
+                    offset *= coef;
+                    pos = scale * pos + initPos;
+                    offset = offset * abs(scale) + 1;
+                }
+                return (length(pos)/abs(offset));
+            }
+
             float sceneDist(float3 pos){
-                return mengerDist(pos);
+                switch(_CubeType){
+                    case 0: return mengerDist(pos);
+                    case 1: return mandelBoxDist(pos*4)/4;
+                    case 2: return lerp(
+                    mengerDist(pos),
+                    mandelBoxDist(pos*4)/4,
+                    (_CosTime.y+1)/2
+                    );
+                }
+                return 0;
             }
 
             ENDCG
