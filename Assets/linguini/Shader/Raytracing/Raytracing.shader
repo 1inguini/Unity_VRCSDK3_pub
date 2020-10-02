@@ -529,21 +529,23 @@ Shader "linguini/Raytracing/Box"
             
             intersection cube(rayDef ray) {
                 float2 buf;
+                float2 range;
                 float3 tmin, tmax;
-                #define SOLVE(i) \
-                buf[0] = (0.5 - ray.pos.i)/ray.dir.i; \
-                buf[1] = -(0.5 + ray.pos.i)/ray.dir.i; \
-                tmin.i = max(0, min(buf[0],buf[1])); \
-                tmax.i = max(buf[0],buf[1]);
                 
+                #define SOLVE(i) \
+                buf = (range - ray.pos.i)/ray.dir.i; \
+                tmin.i = max(0, min(buf[0], buf[1])); \
+                tmax.i = max(buf[0], buf[1]);
+                
+                range = float2(-1,1) * 0.5;
                 SOLVE(x)
                 SOLVE(y)
                 SOLVE(z)
                 #undef SOLVE
-                float2 tbound = float2(max3(tmin), min3(tmax));
+                range = float2(max3(tmin), min3(tmax));
                 intersection o;
-                o.intersect = tbound[0] < tbound[1];
-                o.range = !o.intersect? float2(-INF, INF): tbound;
+                o.intersect = range[0] < range[1];
+                o.range = !o.intersect? float2(-INF, INF): range;
                 o.surface = o.range[0] < 0;
                 o.normal = cubeNormal(getPos(ray, o.range));
                 return o;
@@ -613,13 +615,13 @@ Shader "linguini/Raytracing/Box"
                 );
             }
 
-            // pass cube and make menger sponge // failing
-            bodyDef menger(bodyDef body) {
-                for (uint i = 0; i < 2; i++) {
-                    body = mengerFold(body);
-                }
-                return body;
-            } 
+            // // pass cube and make menger sponge // failing
+            // bodyDef menger(bodyDef body) {
+            //     for (uint i = 0; i < 2; i++) {
+            //         body = mengerFold(body);
+            //     }
+            //     return body;
+            // }
 
             bodyDef scene(rayDef ray) {
                 
@@ -766,7 +768,8 @@ Shader "linguini/Raytracing/Box"
 
                 // float4x4 rayCoord = addShift(dir2zAxis(rayDirV), -pos);
                 // bodyDef p = scene(ray);
-                bodyDef p = demoScene(ray);
+                // bodyDef p = demoScene(ray);
+                bodyDef p = initBody(CUBE, IDMAT4, ray);
 
                 if(!p.i.intersect) discard;
                 
