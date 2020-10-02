@@ -7,9 +7,9 @@ Material:
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_Name: MandelBox
+  m_Name: Menger
   m_Shader: {fileID: 4800000, guid: 1e6581eb61a374349b10ff5be5618f8c, type: 3}
-  m_ShaderKeywords: _BOXTYPE_MENGER _BOX_MANDELBOX _SHADOW_OFF
+  m_ShaderKeywords: _BOXTYPE_MENGER _BOX_MENGER _SHADOW_OFF
   m_LightmapFlags: 4
   m_EnableInstancingVariants: 0
   m_DoubleSidedGI: 0
@@ -56,7 +56,7 @@ Material:
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     m_Floats:
-    - _BOX: 1
+    - _BOX: 0
     - _BOXTYPE: 0
     - _BoxType: 0
     - _BumpScale: 1

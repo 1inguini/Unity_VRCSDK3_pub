@@ -2,7 +2,6 @@
     #define RAYMARCHING_INCLUDED
 
     fixed4 _Color;
-    bool _ShadowOn;
     fixed4 _BackGround;
     float _MaxDistance;
     float _Resolution;
@@ -34,14 +33,14 @@
     {
         v2f o;
         o.vertex = UnityObjectToClipPos(v.vertex);
-        #if defined(WORLD)
+        #ifdef WORLD
             // メッシュのワールド座標を代入
             o.pos = mul(unity_ObjectToWorld, v.vertex);
-        #elif defined(OBJECT)
+        #elif OBJECT
             // メッシュのローカル座標を代入
             o.pos = v.vertex;
         #else
-            o.pos = v.vertex;
+            o.pos = mul(unity_ObjectToWorld, v.vertex);
         #endif
         // o.uv = v.uv;
         return o;
@@ -136,15 +135,18 @@
 
     #define K 3
     fixed shadowmarch (float3 pos, float3 rayDir) {
-        float maxDistance = 1; // 10 * _MaxDistance;
+        // float maxDistance = 1; // 10 * _MaxDistance;
         float3 initPos = pos;
         float result = 1;
-        for (
-        float marchingDist = sceneDist(pos);
-        distance(pos, initPos) < maxDistance;
-        pos += abs(marchingDist) * rayDir
-        ) {
+        // for (
+        float marchingDist; // = sceneDist(pos);
+        // distance(pos, initPos) < maxDistance;
+        // pos += abs(marchingDist) * rayDir
+        // )
+        [unroll(35)] for (uint i = 0; i < 35; i++)
+        {
             marchingDist = sceneDist(pos);
+            pos += abs(marchingDist) * rayDir;
             if (abs(marchingDist) < minDistance){
                 return 0;
             }
@@ -159,7 +161,7 @@
         float3 lightDir;
         #ifdef WORLD
             lightDir = _WorldSpaceLightPos0.xyz;
-        #elif defined(OBJECT)
+        #elif OBJECT
             //ローカル座標で計算しているので、ディレクショナルライトの角度もローカル座標にする
             lightDir = mul(unity_WorldToObject, _WorldSpaceLightPos0).xyz;
         #else
@@ -194,13 +196,13 @@
         fragout o;
         
         float3 pos;
-        #if defined(WORLD)
+        #ifdef WORLD
             pos = _WorldSpaceCameraPos;
-        #elif defined(OBJECT)
+        #elif OBJECT
             // float3 pos = mul(unity_WorldToObject,_WorldSpaceCameraPos);
             pos = mul(unity_WorldToObject, float4(_WorldSpaceCameraPos, 1)).xyz;
         #else
-            pos = 0;
+            pos = _WorldSpaceCameraPos;
         #endif
         
         // レイの進行方向
@@ -209,18 +211,27 @@
         if (pos.x == 0, pos.y == 0, pos.z == 0) discard;
         
         float4 projectionPos;
-        #if defined(WORLD)
+        #ifdef WORLD
             projectionPos = UnityWorldToClipPos(float4(pos, 1.0));
-        #elif defined(OBJECT)
+        #elif OBJECT
             projectionPos = UnityObjectToClipPos(float4(pos, 1.0));
         #else
-            projectionPos = 1;
+            projectionPos = UnityWorldToClipPos(float4(pos, 1.0));
         #endif
         o.depth = projectionPos.z / projectionPos.w;
 
         rayDir = mul(unity_WorldToObject, _WorldSpaceLightPos0).xyz;
-        fixed shadow = _ShadowOn? shadowmarch(pos + rayDir * 10 * minDistance, rayDir): 1;
-        o.color = lighting(pos, shadow, _Color);
+        #ifdef _SHADOW_ON
+            o.color = lighting(
+            pos, 
+            shadowmarch(pos + rayDir * 10 * minDistance, rayDir),
+            _Color
+            );
+        #elif _SHADOW_OFF
+            o.color = lighting(pos, 1, _Color);
+        #else
+            o.color = lighting(pos, 1, _Color);
+        #endif
         return o;
     }
 

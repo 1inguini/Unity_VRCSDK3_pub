@@ -6,7 +6,6 @@
         _Color ("Color", Color) = (1,1,1)
         [MaterialToggle] _ShadowOn ("ShadowOn", Float) = 0 
         _BackGround ("BackGround", Color) = (0,0,0)
-        _Size ("Size", Range(0,1)) = 1
         _MaxDistance ("MaxDistance", Range(0,1)) = 0.1
         _Resolution ("Resolution", Range(0,1)) = 0.3
         _CubeType ("CubeType", Int) = 0
@@ -27,45 +26,14 @@
             #pragma vertex vert
             #pragma fragment frag
             
+            #pragma shader_feature OBJECT
+
             #include "UnityCG.cginc"
             #include "Lighting.cginc"
             
-            #define OBJECT
             float sceneDist(float3 pos);
             #include "Raymarching.cginc"
-            
-            uint _CubeType;
 
-            float3 mengerizeXPos(float3 pos, float offset) {
-                pos.yz = abs(pos.yz);
-
-                pos.yz -= offset/2;
-                pos.yz = abs(pos.yz);
-                pos.yz += offset/2;
-
-                pos.yz -= offset;
-                return pos;
-            }
-            float3 mengerizeYPos(float3 pos, float offset) {
-                pos.zx = abs(pos.zx);
-
-                pos.zx -= offset/2;
-                pos.zx = abs(pos.zx);
-                pos.zx += offset/2;
-
-                pos.zx -= offset;
-                return pos;
-            }
-            float3 mengerizeZPos(float3 pos, float offset) {
-                pos.xy = abs(pos.xy);
-
-                pos.xy -= offset/2;
-                pos.xy = abs(pos.xy);
-                pos.xy += offset/2;
-
-                pos.xy -= offset;
-                return pos;
-            }
             float3 mengerizePos(float3 pos, float offset) {
                 pos = abs(pos);
 
@@ -104,20 +72,7 @@
                 return max(cube, -dist);
                 // return max(cube, -pillarXDist(pos)/9);
             }            
-            
-            float3 mengerFold(float3 z) {
-                float a = min(z.x - z.y, 0.0);
-                z.x -= a;
-                z.y += a;
-                a = min(z.x - z.z, 0.0);
-                z.x -= a;
-                z.z += a;
-                a = min(z.y - z.z, 0.0);
-                z.y -= a;
-                z.z += a;
-                return z;
-            }
-            
+
             float3 boxFold (float3 pos) {
                 return clamp(pos, -1, 1) * 2 - pos;
             }
@@ -157,16 +112,7 @@
             }
 
             float sceneDist(float3 pos){
-                switch(_CubeType){
-                    case 0: return mengerDist(pos);
-                    case 1: return mandelBoxDist(pos*4)/4;
-                    case 2: return lerp(
-                    mengerDist(pos),
-                    mandelBoxDist(pos*4)/4,
-                    (_CosTime.y+1)/2
-                    );
-                }
-                return 0;
+                return mengerDist(pos);
             }
 
             ENDCG

@@ -1,6 +1,6 @@
 ﻿//  Copyright (c) 2020 linguini. MIT license
 
-Shader "linguini/Raytracing/Sphere"
+Shader "linguini/Raytracing/Box"
 {
     Properties
     {
@@ -130,6 +130,21 @@ Shader "linguini/Raytracing/Sphere"
                 return scaleMatrix(scale.x, scale.y, scale.z);
             }
 
+            // float4x4 scaleGloballyMatrix(float4x4 mat, float x, float y, float z) {
+                //     mat[0][0] *= x;
+                //     mat[3][0] *= x;
+
+                //     mat[1][1] *= y;
+                //     mat[3][1] *= y;
+                
+                //     mat[2][2] *= z;
+                //     mat[3][2] *= z;
+                //     return mat;
+            // }
+            // float4x4 scaleGloballyMatrix(float4x4 mat, float3 scale) {
+                //     return scaleGloballyMatrix(mat, scale.x, scale.y, scale.z);
+            // }
+            
             float4x4 scaleLocalMatrix(float4x4 mat, float x, float y, float z) {
                 mat[0][0] *= x;
                 mat[3][0] /= x;
@@ -148,6 +163,12 @@ Shader "linguini/Raytracing/Sphere"
             struct appdata
             {
                 float4 vertex : POSITION;
+            };
+
+            struct v2f
+            {
+                float4 pos : POSITION1;
+                float4 vertex : SV_POSITION;
             };
 
             struct fragout
@@ -183,6 +204,13 @@ Shader "linguini/Raytracing/Sphere"
                 return o;
             }
             
+            // rayDef matrixApply(float4x4 mat, rayDef ray) {
+                //     // mat = inverse(mat);
+                //     ray.pos = mul(mat, float4(ray.pos, 1)).xyz;
+                //     ray.dir = mul(mat, ray.dir).xyz;
+                //     return ray;
+            // }
+
             struct intersection {
                 bool intersect;
                 bool surface; // index for "float2 range" that indicates surface.
@@ -193,6 +221,14 @@ Shader "linguini/Raytracing/Sphere"
             float3 getPos(rayDef ray, float2 range) {
                 return range[range[0] < 0]*ray.dir + ray.pos;
             }
+
+            // intersection emptyIntersection(){
+                //     intersection o;
+                //     o.intersect = false;
+                //     o.range = float2(-INF, INF);
+                //     o.normal = 0;
+                //     return o;
+            // }
             
             struct bodyDef {
                 intersection i;
@@ -201,23 +237,17 @@ Shader "linguini/Raytracing/Sphere"
                 rayDef ray;
             };
 
-            #define MENGER_SIZE 64000000
-
-            struct v2f
-            {
-                float4 pos : POSITION1;
-                float4 vertex : SV_POSITION;
-                bodyDef mengerDef[MENGER_SIZE] : MENGER;
-            };
-
             float surface(bodyDef b) {
+                // return b.i.range[b.i.range[0] < 0];
                 return b.i.range[b.i.surface];
             }
 
             bodyDef stepBody(bodyDef body);
             float backside(bodyDef b) {
+                // b.i.range[0] = b.i.range[!(b.i.range[0] < 0 || b.i.inside)];
                 bodyDef next = stepBody(b);
                 return b.i.surface? next.i.range[next.i.range[0] < 0]: b.i.range[1];
+                // return b.i.range[0];
             }
 
             #define PLANE 0
@@ -284,6 +314,21 @@ Shader "linguini/Raytracing/Sphere"
                 return o;
             }
 
+
+            // float getDist(bodyDef b){
+                //     return sign(dot(b.pos - b.ray.pos, b.ray.dir))*distance(b.pos, b.ray.pos);
+                //     // return
+                //     // (b.ray.dir.x?
+                //     // (b.i.pos.x - b.ray.pos.x)/b.ray.dir.x:
+                //     // (b.ray.dir.y?
+                //     // (b.i.pos.y - b.ray.pos.y)/b.ray.dir.y:
+                //     // ((b.i.pos.z - b.ray.pos.z)/b.ray.dir.z)));
+            // }
+
+            // float getDist(bodyDef b){
+                //         return sign(dot(b.pos - b.ray.pos, b.ray.dir))*distance(b.pos, b.ray.pos);
+            // }
+
             bodyDef not(bodyDef b) {
                 b.i.surface = !b.i.surface;
                 // b.i.intersect = !b.i.intersect;
@@ -293,7 +338,21 @@ Shader "linguini/Raytracing/Sphere"
                 return b;
             }
 
+            // bodyDef or(bodyDef b[2]) {
+                //     // return b0 if b0 is foreground, b1 if else.
+                //     bool isB1 = (b[0].i.intersect && b[1].i.intersect)?
+                //     (b[1].i.range.x < b[0].i.range.x):
+                //     (b[1].i.intersect);
+                //     return b[isB1];
+            // }
             bodyDef or(bodyDef b[2]) {
+                // // return b0 if b0 is foreground, b1 if else.
+                // float surfaces[2] = { b[0].i.range[b[0].i.range[0] < 0], b[1].i.range[b[1].i.range[0] < 0] };
+                // return b[
+                // (b[0].i.intersect && b[1].i.intersect)?
+                // (surfaces[1] < surfaces[0]):
+                // (b[1].i.intersect)
+                // ];
                 return b[
                 b[1].i.intersect &&
                 surface(b[1]) < surface(b[0])
@@ -352,6 +411,21 @@ Shader "linguini/Raytracing/Sphere"
                 ); \
             }
 
+            // #define INTERSECTION_FUNC(_bodyName) intersection _bodyName##(rayDef ray) { \
+                //     intersection o; \
+                //     distFuncOut dfo = _bodyName##Dist(ray); \
+                //     o.intersect = dfo.intersect; \
+                //     o.range = dfo.range; \
+                //     o.normal = _bodyName##Normal(o.range[o.range[0] < 0]*ray.dir + ray.pos); \
+                //     return o; \
+            // }
+
+            // float planeDef(float3 normal, float3 pos) {
+                //     return dot(normal, pos);
+            // }
+
+
+
             intersection planeFromNormal(float3 normal, rayDef ray) {
                 intersection o;
                 float DdotN = dot(ray.dir, normal);
@@ -366,13 +440,35 @@ Shader "linguini/Raytracing/Sphere"
             }
 
             intersection plane(rayDef ray) {
+                // intersection o;
+                // o.normal = float3(0,sign(ray.pos.y),0);
+                // distFuncOut dfo = planeDistFromNormal(o.normal, ray);
+                // o.intersect = 0 <= o.range;
+                // return o;
                 return planeFromNormal(float3(0,1,0), ray);
             }
+
+            // float sphereDef(float3 pos) {
+                //     // return square(pos.x) + square(pos.y) + square(pos.z) - 0.25;
+                //     return length(pos) - 0.5;
+            // }
             
             float3 sphereNormal(float3 pos){
                 return normalize(pos - 0);
             }
 
+            // distFuncOut sphereDist(rayDef ray) {
+                //     float DdotP = dot(ray.dir, ray.pos);
+                //     distFuncOut check[2] = {
+                    //         fail(),
+                    //         solveQuadraticHalf(
+                    //         1, //square(ray.dir),
+                    //         DdotP,
+                    //         square(ray.pos) - 0.25
+                    //         )
+                //     };
+                //     return check[DdotP < 0];
+            // }
             intersection sphere(rayDef ray) {
                 intersection o;
                 float DdotP = dot(ray.dir, ray.pos);
@@ -385,12 +481,51 @@ Shader "linguini/Raytracing/Sphere"
                 o.normal = sphereNormal(getPos(ray, o.range));
                 return o;
             }
+            // INTERSECTION_FUNC(sphere)
+            // intersection sphere(float4x4 mat, rayDef ray) {
+                //     INTERSECTION(sphereDist, sphereNormal, mat, ray)
+                //     // intersection o;
+                //     // movedRay mray = matrixApply(mat, ray);
+                //     // o.dist = sphereDist(mray.ray);
+                //     // float3 pos = o.dist*mray.ray.dir + mray.ray.pos;
+                //     // o.dist /= mray.correction; 
+                //     // o.normal = (o.dist <= 0)? 0:
+                //     // mul(
+                //     // transpose(mat),
+                //     // float4(sphereNormal(pos),1)).xyz;
+                //     // return o;
+            // }
 
             float cubeDef(float3 pos) {
                 return max3(abs(pos)) - 0.5;
             }
 
             NORMAL_FUNC(cube)
+
+            // float3 cubeNormal(float3 pos) {
+                //     return normalize(step(pos, 0.5-EPS));
+            // }
+
+            // distFuncOut cubeDist(rayDef ray) {
+                //     float2 buf;
+                //     float3 tmin, tmax;
+                //     #define SOLVE(i) \
+                //     buf[0] = (0.5 - ray.pos.i)/ray.dir.i; \
+                //     buf[1] = -(0.5 + ray.pos.i)/ray.dir.i; \
+                //     tmin.i = max(0, min(buf[0],buf[1])); \
+                //     tmax.i = max(buf[0],buf[1]);
+                //     SOLVE(x)
+                //     SOLVE(y)
+                //     SOLVE(z)
+                //     #undef SOLVE
+                //     float2 tbound = float2(max3(tmin), min3(tmax));
+                //     distFuncOut o;
+                //     o.intersect = tbound[0] < tbound[1];
+                //     o.range = float2(tbound);
+                //     o.range.xy = !o.intersect? float2(-INF, INF): o.range.xy;
+                //     return o;
+            // }
+            // INTERSECTION_FUNC(cube)
             
             intersection cube(rayDef ray) {
                 float2 buf;
@@ -589,10 +724,6 @@ Shader "linguini/Raytracing/Sphere"
 
                 return fixed4(shadow * lighting * col.rgb + (ambient? ambient: 0.1), col.a);
             }
-
-            v2f decodeMenger(v2f i) {
-                
-            } 
 
             v2f vert (appdata v)
             {
