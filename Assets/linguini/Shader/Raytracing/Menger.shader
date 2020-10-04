@@ -21,6 +21,8 @@ Shader "linguini/Raytracing/Menger"
             Blend SrcAlpha OneMinusSrcAlpha
 
             CGPROGRAM
+            // Upgrade NOTE: excluded shader from OpenGL ES 2.0 because it uses non-square matrices
+            #pragma exclude_renderers gles
             #pragma vertex vert
             #pragma fragment frag
             
@@ -36,6 +38,8 @@ Shader "linguini/Raytracing/Menger"
             #define EPS 0.0001
             #define INF 3.402823466e+38
             #define MAXDISTANCE 1000*_MaxDistance
+
+            #define MENGER_ITER 4
 
             float4x4 IDMAT4 = {
                 {1,0,0,0}, 
@@ -89,21 +93,6 @@ Shader "linguini/Raytracing/Menger"
             float4x4 scaleMatrix(float3 scale) {
                 return scaleMatrix(scale.x, scale.y, scale.z);
             }
-
-            // float4x4 scaleGloballyMatrix(float4x4 mat, float x, float y, float z) {
-                //     mat[0][0] *= x;
-                //     mat[3][0] *= x;
-
-                //     mat[1][1] *= y;
-                //     mat[3][1] *= y;
-                
-                //     mat[2][2] *= z;
-                //     mat[3][2] *= z;
-                //     return mat;
-            // }
-            // float4x4 scaleGloballyMatrix(float4x4 mat, float3 scale) {
-                //     return scaleGloballyMatrix(mat, scale.x, scale.y, scale.z);
-            // }
             
             float4x4 scaleLocalMatrix(float4x4 mat, float x, float y, float z) {
                 mat[0][0] *= x;
@@ -129,6 +118,7 @@ Shader "linguini/Raytracing/Menger"
             {
                 float4 pos : POSITION1;
                 float4 vertex : SV_POSITION;
+                // float2 cantorHoles[pow(2, MENGER_ITER)] : CANTOR;
             };
 
             struct fragout
@@ -212,31 +202,34 @@ Shader "linguini/Raytracing/Menger"
                 //     return o;
             // }
             
-            bool inRange(float2 range, float x) {
+            bool inBound(float2 range, float x) {
                 return range[0] <= x && x <= range[1];
             }
             
-            bool inRange2(float2 range, float x0, float x1) {
-                return inRange(range, x0) && inRange(range, x1);
+            bool inBound2(float2 range, float x0, float x1) {
+                return inBound(range, x0) && inBound(range, x1);
             }
-            bool inRange2(float2 range, float2 x) {
-                return inRange2(range, x[0], x[1]);
+            bool inBound2(float2 range, float2 x) {
+                return inBound2(range, x[0], x[1]);
             }
-            
-            bool inRange3(float2 range, float3 pos) {
-                return 
-                inRange(range, pos.x) &&
-                inRange(range, pos.y) &&
-                inRange(range, pos.z);
+            bool inBound2(float range0, float range1, float2 x) {
+                return inBound2(float2(range0, range1), x[0], x[1]);
             }
 
-            bool inRange2x2(float2 range, float2 xy0, float2 xy1) {
+            bool inBound3(float2 range, float3 pos) {
                 return 
-                inRange2(range, xy0.x, xy1.x) &&
-                inRange2(range, xy0.y, xy1.y);
+                inBound(range, pos.x) &&
+                inBound(range, pos.y) &&
+                inBound(range, pos.z);
             }
 
-            intersection yzinRangeWhenX(float2 range, rayDef ray, float x) {
+            bool inBound2x2(float2 range, float2 xy0, float2 xy1) {
+                return 
+                inBound2(range, xy0.x, xy1.x) &&
+                inBound2(range, xy0.y, xy1.y);
+            }
+
+            intersection yzinBoundWhenX(float2 range, rayDef ray, float x) {
                 intersection o;
                 
                 float2 buf;
@@ -248,7 +241,7 @@ Shader "linguini/Raytracing/Menger"
                 (ray.dir.z/ray.dir.x)*(x - ray.pos.x) + ray.pos.z:
                 ray.pos.z;
                 
-                o.intersect = inRange2(range, buf);
+                o.intersect = inBound2(range, buf);
                 o.t = ray.dir.x?
                 (x - ray.pos.x)/ray.dir.x:
                 (ray.dir.y?
@@ -258,103 +251,286 @@ Shader "linguini/Raytracing/Menger"
                 o.normal = float3(sign(x),0,0);
                 return o;
             }
-            intersection zxinRangeWhenY(float2 range, rayDef ray, float y) {
+            intersection zxinBoundWhenY(float2 range, rayDef ray, float y) {
                 intersection o;
                 ray.pos = ray.pos.yzx;
                 ray.dir = ray.dir.yzx;
-                o = yzinRangeWhenX(range, ray, y);
+                o = yzinBoundWhenX(range, ray, y);
                 o.normal.yzx = o.normal;
                 return o;
             }
-            intersection xyinRangeWhenZ(float2 range, rayDef ray, float z) {
+            intersection xyinBoundWhenZ(float2 range, rayDef ray, float z) {
                 intersection o;
                 ray.pos = ray.pos.zxy;
                 ray.dir = ray.dir.zxy;
-                o = yzinRangeWhenX(range, ray, z);
+                o = yzinBoundWhenX(range, ray, z);
                 o.normal.zxy = o.normal;
                 return o;
             }
 
             intersection cube(rayDef ray) {
                 intersection o[6];
-                float2 range = float2(-1,1)*0.5;
-                o[0] = yzinRangeWhenX(range, ray, range[0]);
-                o[1] = yzinRangeWhenX(range, ray, range[1]);
-                o[2] = zxinRangeWhenY(range, ray, range[0]); 
-                o[3] = zxinRangeWhenY(range, ray, range[1]);
-                o[4] = xyinRangeWhenZ(range, ray, range[0]);
-                o[5] = xyinRangeWhenZ(range, ray, range[1]);
+                float2 range = float2(-1,1)*0.3;
+                o[0] = yzinBoundWhenX(range, ray, range[0]);
+                o[1] = yzinBoundWhenX(range, ray, range[1]);
+                o[2] = zxinBoundWhenY(range, ray, range[0]); 
+                o[3] = zxinBoundWhenY(range, ray, range[1]);
+                o[4] = xyinBoundWhenZ(range, ray, range[0]);
+                o[5] = xyinBoundWhenZ(range, ray, range[1]);
                 [unroll] for (uint i = 1; i < 6; i++) {
                     o[0] = o[i*(!o[0].intersect || (o[i].intersect && o[i].t < o[0].t))];
                 }
                 return o[0];
             }
 
-            intersection donutYZWhenX(rayDef ray, float4 rangeWithHole, float faceDir, float x) {
-                intersection o;
-                
-                float2 buf;
-                buf[0] = ray.dir.x? 
+
+            float getT(rayDef ray, float3 pos) {
+                return ray.dir.x?
+                (pos.x - ray.pos.x)/ray.dir.x:
+                (ray.dir.y?
+                (pos.y - ray.pos.y)/ray.dir.y:
+                (pos.z - ray.pos.z)/ray.dir.z
+                );
+            }
+            float getTorINF(rayDef ray, float3 pos) {
+                float t = getT(ray, pos);
+                return t < 0? INF: t;
+            }
+
+            float3 posFromX(float x, rayDef ray) {
+                float3 pos;
+                pos.x = x;
+
+                pos.y = ray.dir.x? 
                 (ray.dir.y/ray.dir.x)*(x - ray.pos.x) + ray.pos.y: 
                 ray.pos.y; 
 
-                buf[1] = ray.dir.x?
+                pos.z = ray.dir.x?
                 (ray.dir.z/ray.dir.x)*(x - ray.pos.x) + ray.pos.z:
                 ray.pos.z;
+                return pos;
+            }
+            float3 posFromY(float y, rayDef ray) {
+                float3 pos;
+                ray.pos = ray.pos.yzx;
+                ray.dir = ray.dir.yzx;
+                pos.yzx = posFromX(y, ray);
+                return pos;
+            }
+            float3 posFromZ(float z, rayDef ray) {
+                float3 pos;
+                ray.pos = ray.pos.zxy;
+                ray.dir = ray.dir.zxy;
+                pos.zxy = posFromX(z, ray);
+                return pos;
+            }
+            float3 posFromXYZ(uint switchXYZ, float n, rayDef ray) {
+                float3 pos;
+                uint3 i;
+                i.x = switchXYZ;
+                i.y = (i.x + 1) % 3;
+                i.z = (i.x + 2) % 3;
                 
-                o.intersect = 
-                inRange2(float2(rangeWithHole[0], rangeWithHole[3]), buf) && 
-                !inRange2(float2(rangeWithHole[1], rangeWithHole[2]), buf);
-                o.t = ray.dir.x?
-                (x - ray.pos.x)/ray.dir.x:
-                (ray.dir.y?
-                (buf[0] - ray.pos.y)/ray.dir.y:
-                (buf[1] - ray.pos.z)/ray.dir.z
-                );
-                o.normal = float3(faceDir,0,0);
+                pos[i.x] = n;
+                
+                pos[i.y] = ray.dir[i.x]? 
+                (ray.dir[i.y]/ray.dir[i.x])*(pos[i.x] - ray.pos[i.x]) + ray.pos[i.y]: 
+                ray.pos[i.y]; 
+
+                pos[i.z] = ray.dir[i.x]?
+                (ray.dir[i.z]/ray.dir[i.x])*(pos[i.x] - ray.pos[i.x]) + ray.pos[i.z]:
+                ray.pos[i.z];
+                return pos;
+            }
+
+            bool posInBound(float3x2 bound, float3 pos) {
+                return
+                inBound(bound[0], pos.x) &&
+                inBound(bound[1], pos.y) &&
+                inBound(bound[2], pos.z)
+                ;
+            }
+
+            intersection planeYZ(float2 bound, float x, rayDef ray) {
+                intersection o;
+                float3 pos;
+                pos = posFromX(x, ray);
+
+                o.t = getT(ray, pos);
+                o.intersect = 0 <= o.t && inBound2(bound, pos.yz);
+                o.normal = normalize(float3(sign(x),0,0));
                 return o;
             }
-            intersection donutZXWhenY(rayDef ray, float4 rangeWithHole, float faceDir, float y) {
+            intersection planeZX(float2 bound, float y, rayDef ray) {
                 intersection o;
                 ray.pos = ray.pos.yzx;
                 ray.dir = ray.dir.yzx;
-                o = donutYZWhenX(ray, rangeWithHole, faceDir, y);
+                o = planeYZ(bound, y, ray);
                 o.normal.yzx = o.normal;
                 return o;
             }
-            intersection donutXYWhenZ(rayDef ray, float4 rangeWithHole, float faceDir, float z) {
+            intersection planeXY(float2 bound, float z, rayDef ray) {
                 intersection o;
                 ray.pos = ray.pos.zxy;
                 ray.dir = ray.dir.zxy;
-                o = donutYZWhenX(ray, rangeWithHole, faceDir, z);
+                o = planeYZ(bound, z, ray);
                 o.normal.zxy = o.normal;
                 return o;
             }
 
+
+            intersection or(intersection i[2]) {
+                return i[i[1].t < i[0].t];
+            }
+            intersection or(intersection i0, intersection i1) {
+                intersection i[2] = { i0, i1 };
+                return or(i);
+            }
+
+            float2x2 nextCantorHoles(float2 hole) {
+                float range = (hole[1] - hole[0])/3.0;
+                float2x2 o = {
+                    { hole[0] - 2*range, hole[0] - range },
+                    { hole[1] + range, hole[1] + 2*range }
+                };
+                return o;
+            }
+
+            struct cantorHolesWrapper {
+                float2 cantorHoles[pow(2, MENGER_ITER)];
+            };
+
+            cantorHolesWrapper initCantorHoles() {
+                cantorHolesWrapper noCantorHoles;
+                [unroll] for (int i = 0; i < pow(2, MENGER_ITER); i++) {
+                    noCantorHoles.cantorHoles[i] = 0;
+                }
+                noCantorHoles.cantorHoles[0] = float2(-1,1)*0.5/3.0;
+                int origin = 1; 
+                float2x2 nextHoles;
+                [unroll] for (int level = 0; level < MENGER_ITER; level++) {
+                    [unroll] for (int i = 0; i < pow(2, level); i++) {
+                        nextHoles = nextCantorHoles(noCantorHoles.cantorHoles[origin-i]);
+                        noCantorHoles.cantorHoles[origin + 2*i] = nextHoles[0];
+                        noCantorHoles.cantorHoles[origin + 2*i + 1] = nextHoles[1];
+                    }
+                    origin += pow(2, level);
+                }
+                return noCantorHoles;
+            }
+
+            inline float tOrINF(intersection i) {
+                return i.intersect? i.t: INF;
+            }
+
+            bool or3(bool3 b) {
+                return b.x || b.y || b.z;
+            }
+            
             intersection menger(rayDef ray) {
-                intersection o[3][4];
-                float4 rangeWithHole = float4(-1, -1.0/3.0, 1.0/3.0, 1)*0.5;
+                uint length = pow(2, MENGER_ITER);
+                intersection o;
+                float2 bound = float2(-1, 1)*0.5;
+                float2 xy[2], yz[2], zx[2];
+
+                o.intersect = false;
+                o.t = INF;
+                o.normal = float3(1,0,0);
+
+                float2 holes[pow(2, MENGER_ITER)-1];
+                holes[0] = bound/3.0;
+                uint origin = 1; 
+                float2x2 nextHoles;
+                for (int level = 1; level < MENGER_ITER; level++) {
+                    for (int i = 0; i < pow(2, level - 1); i++) {
+                        nextHoles = nextCantorHoles(holes[origin-(i+1)]);
+                        holes[origin + 2*i] = nextHoles[0];
+                        holes[origin + 2*i + 1] = nextHoles[1];
+                    }
+                    origin += pow(2, level);
+                }
+                // holes[pow(2, MENGER_ITER)-1] = bound;
                 
                 float faceDir;
-                [unroll] for (uint i = 0; i < 4; i++) {
-                    faceDir = fmod(i, 2)*2 - 1;
-                    o[0][i] = donutYZWhenX(ray, rangeWithHole, faceDir, rangeWithHole[i]);
-                    o[1][i] = donutZXWhenY(ray, rangeWithHole, faceDir, rangeWithHole[i]);
-                    o[2][i] = donutXYWhenZ(ray, rangeWithHole, faceDir, rangeWithHole[i]);
-                }
-
-                bool doReplace;
-                [unroll] for (uint i = 0; i < 3; i++) {
-                    [unroll] for (uint j = 0; j < 4; j++) {
-                        doReplace =
-                        !(o[0][0].intersect && 0 <= o[0][0].t) ||
-                        (o[i][j].intersect && 0 <= o[i][j].t && o[i][j].t < o[0][0].t);
+                float3 pos;
+                intersection next;
+                float3x2 bound3D;
+                [unroll] for (int i = 0; i < 2; i++) {
+                    [unroll] for (int xyz = 0; xyz < 3; xyz++) {
+                        pos = posFromXYZ(xyz, bound[i], ray);
                         
-                        o[0][0] = o[i*doReplace][j*doReplace];
+                        next.t = getTorINF(ray, pos);
+                        next.intersect = 
+                        inBound(bound, pos[(xyz+1)%3]) &&
+                        inBound(bound, pos[(xyz+2)%3]);
+
+                        for (int hole0 = 0; hole0 < pow(2, MENGER_ITER)-1; hole0++){
+                            for (int hole1 = 0; hole1 < pow(2, MENGER_ITER)-1; hole1++){
+                                next.intersect = next.intersect &&
+                                !(
+                                inBound(holes[hole0], pos[(xyz+1)%3]) ||
+                                inBound(holes[hole1], pos[(xyz+2)%3])
+                                );
+                            }
+                        }
+                        next.normal = 0;
+                        next.normal[xyz] = 1; 
+                        
+                        // will next replace o?
+                        next.intersect = next.intersect && next.t < o.t;
+
+                        o.t = next.intersect? next.t: o.t;
+                        o.normal = next.intersect? next.normal: o.normal;
+                        o.intersect = next.intersect || o.intersect;
                     }
                 }
-                return o[0][0];
+                [unroll] for (int layer = 0; layer < pow(2, MENGER_ITER)-1; layer++) {
+                    [unroll] for (int i = 0; i < 2; i++) {
+                        [unroll] for (int xyz = 0; xyz < 3; xyz++) {
+                            pos = posFromXYZ(xyz, holes[layer][i], ray);
+                            
+                            next.t = getTorINF(ray, pos);
+                            next.intersect = 
+                            inBound(bound, pos[(xyz+1)%3]) &&
+                            inBound(bound, pos[(xyz+2)%3]);
+
+                            for (int hole0 = 0; hole0 < pow(2, MENGER_ITER)-1; hole0++){
+                                for (int hole1 = 0; hole1 < pow(2, MENGER_ITER)-1; hole1++){
+                                    next.intersect = next.intersect &&
+                                    !(
+                                    inBound(holes[hole0], pos[(xyz+1)%3]) ||
+                                    inBound(holes[hole1], pos[(xyz+2)%3])
+                                    );
+                                }
+                            }
+                            next.normal = 0;
+                            next.normal[xyz] = -2*(i % 2) + 1; 
+                            
+                            // will next replace o?
+                            next.intersect = next.intersect && next.t < o.t;
+
+                            o.t = next.intersect? next.t: o.t;
+                            o.normal = next.intersect? next.normal: o.normal;
+                            o.intersect = next.intersect || o.intersect;
+                        }
+                    }
+                }
+                return o;
+                // return planeXY(bound, bound[1], ray);
+
+                // bool doReplace;
+                // [unroll] for (uint i = 0; i < 3; i++) {
+                    //     [unroll] for (uint j = 0; j < 4; j++) {
+                        //         doReplace =
+                        //         !(o[0][0].intersect && 0 <= o[0][0].t) ||
+                        //         (o[i][j].intersect && 0 <= o[i][j].t && o[i][j].t < o[0][0].t);
+                        
+                        //         o[0][0] = o[i*doReplace][j*doReplace];
+                    //     }
+                // }
+                // return o[0][0];
             }
+
 
             fixed4 lighting(float3 pos, float3 normal, fixed shadow, fixed4 col) {
                 float3 lightDir;
@@ -403,6 +579,8 @@ Shader "linguini/Raytracing/Menger"
                     o.pos = v.vertex;
                 #endif
                 // o.uv = v.uv;
+                // cantorHolesWrapper c = initCantorHoles();
+                // o.cantorHoles = c.cantorHoles;
                 return o;
             }
 
@@ -427,6 +605,7 @@ Shader "linguini/Raytracing/Menger"
 
                 // レイの進行方向
                 ray.dir = normalize(i.pos.xyz - ray.pos);
+                
 
                 intersection p = menger(ray);
 

@@ -617,10 +617,10 @@ Shader "linguini/Raytracing/Box"
 
             // // pass cube and make menger sponge // failing
             // bodyDef menger(bodyDef body) {
-            //     for (uint i = 0; i < 2; i++) {
-            //         body = mengerFold(body);
-            //     }
-            //     return body;
+                //     for (uint i = 0; i < 2; i++) {
+                    //         body = mengerFold(body);
+                //     }
+                //     return body;
             // }
 
             bodyDef scene(rayDef ray) {
