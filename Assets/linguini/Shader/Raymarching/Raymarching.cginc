@@ -50,6 +50,12 @@
         return min(x, min(y, z));
     }
 
+    float square(float x) {
+        return x*x;
+    }
+    float square(float3 v) {
+        return dot(v, v);
+    }
 
     float3 repeat(float3 pos){
         float size = 4;
@@ -103,54 +109,90 @@
         pillarZDist(pos)
         );
     }
-
+    
+    #define EPS 0.0001
+    
     float3 getSceneNormal(float3 pos){
-        float EPS = 0.0001;
-        float def = sceneDist(pos);
+        // float def = sceneDist(pos);
+        float3 delta = float3(EPS, 0, 0);
         return normalize(float3(
-        sceneDist(pos + float3(EPS,0,0)) - def,
-        sceneDist(pos + float3(0,EPS,0)) - def,
-        sceneDist(pos + float3(0,0,EPS)) - def
-        )
-        );
+        sceneDist(1, pos + delta.xyz) - sceneDist(1, pos - delta.xyz),
+        sceneDist(1, pos + delta.yzx) - sceneDist(1, pos - delta.xyz),
+        sceneDist(1, pos + delta.zxy) - sceneDist(1, pos - delta.xyz)
+        ));
     }
 
-    #define minDistance 0.0001
+    struct marchResult {
+        float totalDist;
+        bool intersect;
+        float3 pos;
+        float iter;
+    };
 
-    float3 raymarch (float3 pos, float3 rayDir) {
-        float maxDistance = 1000 * _MaxDistance;
-        float3 initPos = pos;
-        for (
-        float marchingDist = sceneDist(pos);
-        distance(pos, initPos) < maxDistance;
-        pos += abs(marchingDist) * rayDir
-        ) {
-            marchingDist = sceneDist(pos);
-            if (abs(marchingDist) < minDistance){
-                return pos;
-            }
-        }
-        return 0;
+    marchResult raymarch (float3 pos, float3 rayDir) {
+        marchResult o;
+
+        #ifdef WORLD
+            float clarity = dot(rayDir, -UNITY_MATRIX_V[2].xyz);
+        #else // #elif OBJECT
+            float clarity = dot(mul((float3x3)unity_ObjectToWorld, rayDir), -UNITY_MATRIX_V[2].xyz);
+        #endif
+        
+        float maxDist = 100 * _MaxDistance;
+        float minDist = pow(5*clarity, -5);
+
+        // float minDist = EPS;
+        o.pos = pos;
+        o.totalDist = 0;
+        o.iter = 0;
+        float marchingDist;
+        do {
+            marchingDist = (sceneDist(clarity, o.pos));
+            o.totalDist += marchingDist;
+            o.pos += marchingDist*rayDir;
+            o.iter++;
+        } while (minDist <= marchingDist && o.totalDist < maxDist);
+        o.intersect = minDist < marchingDist;
+        return o;
     }
+    
+    // https://techblog.kayac.com/unity_advent_calendar_2018_15
+    // RGB->HSV変換
+    float3 rgb2hsv(float3 rgb)
+    {
+        float4 K = float4(0.0, -1.0 / 3.0, 2.0 / 3.0, -1.0);
+        float4 p = rgb.g < rgb.b ? float4(rgb.bg, K.wz) : float4(rgb.gb, K.xy);
+        float4 q = rgb.r < p.x ? float4(p.xyw, rgb.r) : float4(rgb.r, p.yzx);
 
-    #define K 3
+        float d = q.x - min(q.w, q.y);
+        float e = 1.0e-10;
+        return float3(abs(q.z + (q.w - q.y) / (6.0 * d + e)), d / (q.x + e), q.x);
+    }
+    // HSV->RGB変換
+    float3 hsv2rgb(float3 hsv)
+    {
+        float4 K = float4(1.0, 2.0 / 3.0, 1.0 / 3.0, 3.0);
+        float3 p = abs(frac(hsv.xxx + K.xyz) * 6.0 - K.www);
+        return hsv.z * lerp(K.xxx, saturate(p - K.xxx), hsv.y);
+    }
+    
+    #define K 16
     fixed shadowmarch (float3 pos, float3 rayDir) {
         // float maxDistance = 1; // 10 * _MaxDistance;
-        float3 initPos = pos;
+        // float3 initPos = pos;
         float result = 1;
-        // for (
-        float marchingDist; // = sceneDist(pos);
-        // distance(pos, initPos) < maxDistance;
-        // pos += abs(marchingDist) * rayDir
-        // )
+        float marchingDist;
+        float totalDist = 0;
         [unroll(35)] for (uint i = 0; i < 35; i++)
         {
-            marchingDist = sceneDist(pos);
-            pos += abs(marchingDist) * rayDir;
-            if (abs(marchingDist) < minDistance){
+            marchingDist = abs(sceneDist(1, pos));
+            if (marchingDist < EPS){
                 return 0;
             }
-            result = min(result, K * marchingDist / distance(pos,initPos));
+
+            totalDist += marchingDist;
+            pos += marchingDist * rayDir;
+            result = min(result, K * marchingDist / totalDist);
         }
         return result;
     }
@@ -187,7 +229,8 @@
         pos, 
         normal);
 
-        return fixed4(shadow * lighting * col.rgb + (ambient? ambient: 0.1), col.a);
+        // return fixed4(lerp(col.rgb*0.01, col.rgb, shadow) * lighting + (ambient? ambient: 0.1), col.a);
+        return fixed4(lerp(col.rgb*(ambient? ambient: 0.1), col.rgb, shadow * lighting), col.a);
     }
 
 
@@ -207,9 +250,11 @@
         
         // レイの進行方向
         float3 rayDir = normalize(i.pos.xyz - pos);
-        pos = raymarch(pos, rayDir);
-        if (pos.x == 0, pos.y == 0, pos.z == 0) discard;
-        
+        marchResult result = raymarch(pos, rayDir);
+        // if (pos.x == 0, pos.y == 0, pos.z == 0) discard;
+        if(result.intersect) discard;
+        pos = result.pos;
+
         float4 projectionPos;
         #ifdef WORLD
             projectionPos = UnityWorldToClipPos(float4(pos, 1.0));
@@ -221,16 +266,18 @@
         o.depth = projectionPos.z / projectionPos.w;
 
         rayDir = mul(unity_WorldToObject, _WorldSpaceLightPos0).xyz;
+        o.color.a = _Color.a;
+        o.color.rgb = rgb2hsv(_Color.rgb);
+        o.color.r = frac(o.color.r + result.iter*abs(_CosTime.w)/90.0);
+        o.color.rgb = (hsv2rgb(o.color.rgb));
         #ifdef _SHADOW_ON
             o.color = lighting(
             pos, 
-            shadowmarch(pos + rayDir * 10 * minDistance, rayDir),
-            _Color
+            shadowmarch(pos + rayDir * 10 * EPS, rayDir),
+            o.color
             );
-        #elif _SHADOW_OFF
-            o.color = lighting(pos, 1, _Color);
-        #else
-            o.color = lighting(pos, 1, _Color);
+        #else // #elif _SHADOW_OFF
+            o.color = lighting(pos, 1, o.color);
         #endif
         return o;
     }

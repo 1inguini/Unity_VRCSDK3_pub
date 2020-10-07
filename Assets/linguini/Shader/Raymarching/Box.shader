@@ -38,7 +38,7 @@
             #include "UnityCG.cginc"
             #include "Lighting.cginc"
             
-            float sceneDist(float3 pos);
+            float sceneDist(float clarity, float3 pos);
             #include "Raymarching.cginc"
 
             #if defined(_BOX_MENGER) || defined(_BOX_LERP)
@@ -53,9 +53,9 @@
                     return pos;
                 }
 
-                float mengerDist(float3 pos) {
+                float mengerDist(float clarity, float3 pos) {
                     float cube = cubeDist(pos);
-                    uint maxLevel = _Resolution * 10;
+                    uint maxLevel = clarity * _Resolution * 10;
                     uint size = 3;
                     float offset = 1;
                     float dist = pillarXYZDist(pos*size)/size;
@@ -123,14 +123,14 @@
                 #undef fixedRadius2
             #endif
 
-            float sceneDist(float3 pos) {
+            float sceneDist(float clarity, float3 pos) {
                 #ifdef _BOX_MENGER
-                    return mengerDist(pos);
+                    return mengerDist(clarity, pos);
                 #elif _BOX_MANDELBOX
                     return mandelBoxDist(pos*4)/4;
                 #elif _BOX_LERP
                     return lerp(
-                    mengerDist(pos),
+                    mengerDist(clarity, pos),
                     mandelBoxDist(pos*4)/4,
                     (_SinTime.y+1)/2
                     );

@@ -437,56 +437,25 @@ Shader "linguini/Raytracing/Menger"
                 o.t = INF;
                 o.normal = float3(1,0,0);
 
-                float2 holes[pow(2, MENGER_ITER)-1];
+                float2 holes[pow(2, MENGER_ITER)];
                 holes[0] = bound/3.0;
                 uint origin = 1; 
                 float2x2 nextHoles;
-                for (int level = 1; level < MENGER_ITER; level++) {
-                    for (int i = 0; i < pow(2, level - 1); i++) {
+                [unroll] for (int level = 1; level < MENGER_ITER; level++) {
+                    [unroll] for (int i = 0; i < pow(2, level - 1); i++) {
                         nextHoles = nextCantorHoles(holes[origin-(i+1)]);
                         holes[origin + 2*i] = nextHoles[0];
                         holes[origin + 2*i + 1] = nextHoles[1];
                     }
                     origin += pow(2, level);
                 }
-                // holes[pow(2, MENGER_ITER)-1] = bound;
-                
-                float faceDir;
+                holes[pow(2, MENGER_ITER)-1] = -bound;
+
                 float3 pos;
                 intersection next;
-                float3x2 bound3D;
-                [unroll] for (int i = 0; i < 2; i++) {
+                [unroll] for (int layer = 0; layer < pow(2, MENGER_ITER); layer++) {
                     [unroll] for (int xyz = 0; xyz < 3; xyz++) {
-                        pos = posFromXYZ(xyz, bound[i], ray);
-                        
-                        next.t = getTorINF(ray, pos);
-                        next.intersect = 
-                        inBound(bound, pos[(xyz+1)%3]) &&
-                        inBound(bound, pos[(xyz+2)%3]);
-
-                        for (int hole0 = 0; hole0 < pow(2, MENGER_ITER)-1; hole0++){
-                            for (int hole1 = 0; hole1 < pow(2, MENGER_ITER)-1; hole1++){
-                                next.intersect = next.intersect &&
-                                !(
-                                inBound(holes[hole0], pos[(xyz+1)%3]) ||
-                                inBound(holes[hole1], pos[(xyz+2)%3])
-                                );
-                            }
-                        }
-                        next.normal = 0;
-                        next.normal[xyz] = 1; 
-                        
-                        // will next replace o?
-                        next.intersect = next.intersect && next.t < o.t;
-
-                        o.t = next.intersect? next.t: o.t;
-                        o.normal = next.intersect? next.normal: o.normal;
-                        o.intersect = next.intersect || o.intersect;
-                    }
-                }
-                [unroll] for (int layer = 0; layer < pow(2, MENGER_ITER)-1; layer++) {
-                    [unroll] for (int i = 0; i < 2; i++) {
-                        [unroll] for (int xyz = 0; xyz < 3; xyz++) {
+                        [unroll] for (int i = 0; i < 2; i++) {
                             pos = posFromXYZ(xyz, holes[layer][i], ray);
                             
                             next.t = getTorINF(ray, pos);
