@@ -14,6 +14,9 @@
         [KeywordEnum(MENGER, MANDELBOX, LERP)]
         _BOX ("BoxType", Float) = 0
         
+        [KeywordEnum(OFF, ON)]
+        _DEBUG ("DEBUG", Float) = 0
+        
     }
     SubShader
     {
@@ -25,12 +28,14 @@
             ZWrite On
 
             //アルファ値が機能するために必要
-            Blend SrcAlpha OneMinusSrcAlpha
+            // Blend SrcAlpha OneMinusSrcAlpha
 
             CGPROGRAM
             #pragma vertex vert
             #pragma fragment frag
             
+            #pragma shader_feature _ _DEBUG_ON
+            // #pragma multi_compile WORLD
             #pragma multi_compile OBJECT
             #pragma shader_feature _SHADOW_OFF _SHADOW_ON
             #pragma shader_feature _BOX_MENGER _BOX_MANDELBOX _BOX_LERP
@@ -102,9 +107,9 @@
                     ;
                 }
 
-                float mandelBoxDist(float3 pos) {
+                float mandelBoxDist(float clarity, float3 pos) {
                     float3 initPos = pos;
-                    uint maxLevel = 5 + _Resolution * 10;
+                    uint maxLevel = 5 + _Resolution * 10 * clarity;
                     float scale = -2.5;//_SinTime.y;
                     float offset = 1;
                     float coef = 1;
@@ -127,11 +132,11 @@
                 #ifdef _BOX_MENGER
                     return mengerDist(clarity, pos);
                 #elif _BOX_MANDELBOX
-                    return mandelBoxDist(pos*4)/4;
+                    return mandelBoxDist(clarity, pos*4)/4;
                 #elif _BOX_LERP
                     return lerp(
                     mengerDist(clarity, pos),
-                    mandelBoxDist(pos*4)/4,
+                    mandelBoxDist(clarity, pos*4)/4,
                     (_SinTime.y+1)/2
                     );
                 #endif
@@ -139,6 +144,6 @@
 
             ENDCG
         }
-
+        UsePass "Standard/ShadowCaster"
     }
 }

@@ -17,7 +17,7 @@
         // float2 uv : TEXCOORD0;
         // UNITY_FOG_COORDS(1)
         float4 pos : POSITION1;
-        float4 vertex : SV_POSITION;
+        // float4 vertex : SV_POSITION;
     };
 
     struct fragout
@@ -29,10 +29,10 @@
     // sampler2D _MainTex;
     // float4 _MainTex_ST;
 
-    v2f vert (appdata v)
+    v2f vert (appdata v, out float4 vertex : SV_POSITION)
     {
         v2f o;
-        o.vertex = UnityObjectToClipPos(v.vertex);
+        vertex = UnityObjectToClipPos(v.vertex);
         #ifdef WORLD
             // メッシュのワールド座標を代入
             o.pos = mul(unity_ObjectToWorld, v.vertex);
@@ -46,15 +46,19 @@
         return o;
     }
 
-    float min3(float x, float y, float z){
+    inline float min3(float x, float y, float z){
         return min(x, min(y, z));
     }
 
-    float square(float x) {
+    inline float square(float x) {
         return x*x;
     }
-    float square(float3 v) {
+    inline float square(float3 v) {
         return dot(v, v);
+    }
+
+    inline float blurstep(float x) {
+        return sin(UNITY_HALF_PI*x);
     }
 
     float3 repeat(float3 pos){
@@ -122,6 +126,139 @@
         ));
     }
 
+    /* https://qiita.com/RamType0/items/baf2b9d5ce0f9fc458be {
+        float3 ScaleOf(in float3x3 mat){
+            return float3(length(mat._m00_m10_m20),length(mat._m01_m11_m21),length(mat._m02_m12_m22));
+        }
+        float3 ScaleOf(in float4x4 mat){
+            return ScaleOf((float3x3)mat);
+        }
+        float3 PositionOf(in float4x4 mat){
+            return mat._m03_m13_m23;
+        }
+        float3x3 RotationOf(float3x3 mat,float3 scale){
+            mat._m00_m10_m20 /= scale.x;
+            mat._m01_m11_m21 /= scale.y;
+            mat._m02_m12_m22 /= scale.z;
+            return mat;
+
+        }
+        float3x3 RotationOf(float4x4 mat,float3 scale){
+            return RotationOf((float3x3)mat,scale);
+        }
+
+        float4x4 BuildMatrix(in float3x3 mat,in float3 offset)
+        {
+            return float4x4(
+            float4(mat[0],offset.x),
+            float4(mat[1],offset.y),
+            float4(mat[2],offset.z),
+            float4(0,0,0,1)
+            );
+        }
+        float3x3 Columns(float3 column0,float3 column1,float3 column2){
+            float3x3 ret;
+            ret._m00_m10_m20 = column0;
+            ret._m01_m11_m21 = column1;
+            ret._m02_m12_m22 = column2;
+            return ret;
+        }
+
+        //ベクトルを線形球面補間しますが、入力ベクトルは正規化されている必要があり、戻り値のベクトルは正規化されていません。
+        //Abnormal・・・？
+        float3 SlerpAbnormal(float3 normalizedA,float3 normalizedB,float t){
+            float angle = acos(dot(normalizedA,normalizedB));//acosクッソ重い
+            //float _sin = sin(angle);
+            float aP = sin(mad(-angle,t,angle));
+            float bP = sin(angle * t);
+            return angle ? (aP * normalizedA + bP * normalizedB) : normalizedA;
+        }
+        
+        //回転行列を球面線形補間します。
+        float3x3 Slerp(in float3x3 a ,in float3x3 b,in float t){
+            //OpenGLは列優先メモリレイアウトなのでこのままでOK
+            #if SHADER_TARGET_GLSL
+                float3 iy = SlerpAbnormal(a._m01_m11_m21,b._m01_m11_m21,t);//回転行列の軸ベクトルは当然正規化済み 
+                float3 iz = SlerpAbnormal(a._m02_m12_m22,b._m02_m12_m22,t);//回転行列の軸ベクトルは当然正規化済み 
+                float3 ix = normalize(cross(iy,iz));//クロス積のベクトルの向きに絶対値は関係ない
+                iz = normalize(iz);
+                iy = cross(iz,ix);//直交する正規化ベクトル同士のクロス積も正規化されている
+                return Columns(ix,iy,iz);
+            #else
+                //DirectXは行優先のメモリレイアウトなので、できれば行ベースで計算したい・・・
+                //ところで回転行列って直交行列ですね？
+                //回転行列の0,1,2列=この行列で回転をした後のX,Y,Z軸ベクトル
+                //回転行列の0,1,2行=回転行列の転置行列の0,1,2列
+                //                =回転行列の逆行列の0,1,2列
+                //                =逆回転の回転行列の0,1,2列
+                //                =この行列の逆回転の行列で回転をしたあとのX,Y,Z軸ベクトル
+                //ということで、この関数の中では終始逆回転、かつ転置した状態として取り扱ってるのでこの計算の結果は正しいです。
+                float3 iy = SlerpAbnormal(a[1],b[1],t);//回転行列の軸ベクトルは当然正規化済み 
+                float3 iz = SlerpAbnormal(a[2],b[2],t);//回転行列の軸ベクトルは当然正規化済み 
+                float3 ix = normalize(cross(iy,iz));//クロス積のベクトルの向きに絶対値は関係ない
+                iz = normalize(iz);
+                iy = cross(iz,ix);//直交する正規化ベクトル同士のクロス積も正規化されている
+                return float3x3(ix,iy,iz);
+            #endif
+        }
+
+        //移動、回転行列の回転をSlerp、移動をLerpします。
+        float4x4 InterpolateTRMatrix(in float4x4 a,in float4x4 b,in float t){
+            return BuildMatrix(Slerp((float3x3)a,(float3x3)b,t), lerp(PositionOf(a),PositionOf(b),t));
+        }
+        //回転行列の平均を求めます。Slerp(a,b,0.5)より遥かに高速です。
+        float3x3 RMatrixAverage(in float3x3 a,in float3x3 b){
+            //OpenGLは列優先メモリレイアウトなのでこのままでOK
+            #if SHADER_TARGET_GLSL
+
+                float3 iy = (a._m01_m11_m21 + b._m01_m11_m21)*0.5;//回転行列の軸ベクトルは当然正規化済み 
+                float3 iz = (a._m02_m12_m22 + b._m02_m12_m22)*0.5;//回転行列の軸ベクトルは当然正規化済み 
+                float3 ix = normalize(cross(iy,iz));//クロス積のベクトルの向きに絶対値は関係ない
+                iz = normalize(iz);
+                iy = cross(iz,ix);//直交する正規化ベクトル同士のクロス積も正規化されている
+                return Columns(ix,iy,iz);
+            #else
+                //DirectXは行優先のメモリレイアウトなので、できれば行ベースで計算したい・・・
+                //ところで回転行列って直交行列ですね？
+                //回転行列の0,1,2列=この行列で回転をした後のX,Y,Z軸ベクトル
+                //回転行列の0,1,2行=回転行列の転置行列の0,1,2列
+                //                =回転行列の逆行列の0,1,2列
+                //                =逆回転の回転行列の0,1,2列
+                //                =この行列の逆回転の行列で回転をしたあとのX,Y,Z軸ベクトル
+                //ということで、この関数の中では終始逆回転、かつ転置した状態として取り扱ってるのでこの計算の結果は正しいです。
+                float3 iy = (a[1] + b[1])*0.5;//回転行列の軸ベクトルは当然正規化済み 
+                float3 iz = (a[2] + b[2])*0.5;//回転行列の軸ベクトルは当然正規化済み 
+                float3 ix = normalize(cross(iy,iz));//クロス積のベクトルの向きに絶対値は関係ない
+                iz = normalize(iz);
+                iy = cross(iz,ix);  //直交する正規化ベクトル同士のクロス積も正規化されている
+                return float3x3(ix,iy,iz);
+            #endif
+
+            #if defined(USING_STEREO_MATRICES)
+                #define FACEDIR TRMatrixAverage(unity_StereoCameraToWorld[0],unity_StereoCameraToWorld[1])
+                #define StereoWorldSpaceEyeRotation (float3x3)unity_StereoCameraToWorld
+                #define WorldSpaceFaceRotation RMatrixAverage(StereoWorldSpaceEyeRotation[0],StereoWorldSpaceEyeRotation[1])
+
+                float3 FaceToWorldPos(float3 pos) {return mul(FaceToWorld,float4(pos,1)).xyz;}
+
+                float3 ObjectToFaceAlignedWorldPosUnscaled(in float3 pos)
+                {
+                    float3 ret = mul(WorldSpaceFaceRotation,pos);//ワールド空間でのカメラの向きに回転
+                    ret += PositionOf(unity_ObjectToWorld);//オブジェクトのワールド座標を加算
+                    return ret;
+                }
+                float3 ObjectToFaceAlignedWorldPos(float3 pos)
+                {
+                    pos *= ScaleOf(unity_ObjectToWorld);//unity_ObjectToWorldからのスケールの抽出、適応
+                    return ObjectToFaceAlignedWorldPosUnscaled(pos);
+                }
+            #else
+                // #define FACEDIR -UNITY_MATRIX_V[2].xyz
+                #define FACEDIR unity_WorldToCamera[2].xyz
+            #endif
+        }
+    // } */
+
     struct marchResult {
         float totalDist;
         bool intersect;
@@ -129,30 +266,33 @@
         float iter;
     };
 
-    marchResult raymarch (float3 pos, float3 rayDir) {
+    marchResult raymarch (float clarity, float3 pos, float3 rayDir) {
         marchResult o;
 
-        #ifdef WORLD
-            float clarity = dot(rayDir, -UNITY_MATRIX_V[2].xyz);
-        #else // #elif OBJECT
-            float clarity = dot(mul((float3x3)unity_ObjectToWorld, rayDir), -UNITY_MATRIX_V[2].xyz);
-        #endif
+        // #ifdef WORLD
+        //     float clarity = dot(rayDir, FACEDIR);
+        // #else // #elif OBJECT
+        //     float clarity = dot(rayDir, mul((float3x3)unity_WorldToObject, FACEDIR));
+        // #endif
         
-        float maxDist = 100 * _MaxDistance;
-        float minDist = pow(5*clarity, -5);
-
+        float maxDist = 1000 * _MaxDistance;
+        float minDist = (EPS + 1 - blurstep(clarity)); //pow(3*clarity, -12);
+        // float minDist = EPS+0.01*blurstep(clarity);
+        float initMinDist = minDist;
         // float minDist = EPS;
         o.pos = pos;
         o.totalDist = 0;
         o.iter = 0;
         float marchingDist;
         do {
-            marchingDist = (sceneDist(clarity, o.pos));
+            marchingDist = abs(sceneDist(clarity, o.pos));
             o.totalDist += marchingDist;
             o.pos += marchingDist*rayDir;
+            minDist += square(0.01*marchingDist);
+            clarity -= square(0.01*marchingDist);
             o.iter++;
-        } while (minDist <= marchingDist && o.totalDist < maxDist);
-        o.intersect = minDist < marchingDist;
+        } while (minDist < marchingDist && o.totalDist < maxDist);
+        o.intersect = marchingDist < minDist;
         return o;
     }
     
@@ -234,7 +374,7 @@
     }
 
 
-    fragout frag (v2f i)
+    fragout frag (v2f i, UNITY_VPOS_TYPE screenPos : VPOS)
     {
         fragout o;
         
@@ -250,9 +390,18 @@
         
         // レイの進行方向
         float3 rayDir = normalize(i.pos.xyz - pos);
-        marchResult result = raymarch(pos, rayDir);
+        marchResult result = raymarch(
+        #if defined(UNITY_SINGLE_PASS_STEREO)
+            blurstep(blurstep(1 - (1.2*abs(screenPos.x/_ScreenParams.x - 1)))),
+        #else
+            blurstep(blurstep(1-0.7*distance(0.5, screenPos.xy/_ScreenParams.xy))),
+        #endif
+        pos,
+        rayDir
+        );
+        
         // if (pos.x == 0, pos.y == 0, pos.z == 0) discard;
-        if(result.intersect) discard;
+        if(!result.intersect) discard;
         pos = result.pos;
 
         float4 projectionPos;
@@ -278,6 +427,13 @@
             );
         #else // #elif _SHADOW_OFF
             o.color = lighting(pos, 1, o.color);
+        #endif
+        #if defined(_DEBUG_ON)
+            #if defined(UNITY_SINGLE_PASS_STEREO)
+                o.color.rgb = blurstep(blurstep(1 - (1.2*abs(screenPos.x/_ScreenParams.x - 1))));
+            #else
+                o.color.rgb = blurstep(blurstep(1 - (1.2*abs(screenPos.x/_ScreenParams.x - 1))));
+            #endif
         #endif
         return o;
     }

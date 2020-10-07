@@ -7,9 +7,9 @@ Material:
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_Name: Menger
+  m_Name: DEBUG
   m_Shader: {fileID: 4800000, guid: 1e6581eb61a374349b10ff5be5618f8c, type: 3}
-  m_ShaderKeywords: _BOXTYPE_MENGER _BOX_MENGER _SHADOW_OFF
+  m_ShaderKeywords: _BOXTYPE_MENGER _BOX_MENGER _DEBUG_ON _SHADOW_OFF
   m_LightmapFlags: 4
   m_EnableInstancingVariants: 0
   m_DoubleSidedGI: 0
@@ -61,7 +61,7 @@ Material:
     - _BoxType: 0
     - _BumpScale: 1
     - _Cutoff: 0.5
-    - _DEBUG: 0
+    - _DEBUG: 1
     - _DetailNormalMapScale: 1
     - _DstBlend: 0
     - _GlossMapScale: 1
