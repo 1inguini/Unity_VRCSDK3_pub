@@ -11,12 +11,11 @@
         [KeywordEnum(OFF, ON)]
         _SHADOW ("Shadow", Float) = 0
         
-        [KeywordEnum(MENGER, MANDELBOX, LERP)]
+        [KeywordEnum(SIERPINSKI, MENGER, MANDELBOX, LERP)]
         _BOX ("BoxType", Float) = 0
         
         [KeywordEnum(OFF, ON)]
         _DEBUG ("DEBUG", Float) = 0
-        
     }
     SubShader
     {
@@ -38,107 +37,105 @@
             // #pragma multi_compile WORLD
             #pragma multi_compile OBJECT
             #pragma shader_feature _SHADOW_OFF _SHADOW_ON
-            #pragma shader_feature _BOX_MENGER _BOX_MANDELBOX _BOX_LERP
+            #pragma shader_feature _BOX_SIERPINSKI _BOX_MENGER _BOX_MANDELBOX _BOX_LERP
             
             #include "UnityCG.cginc"
             #include "Lighting.cginc"
-            
-            float sceneDist(float clarity, float3 pos);
+
             #include "Raymarching.cginc"
+            
+            #if defined(_BOX_SIERPINSKI) || defined(_BOX_LERP) 
+                float sierpinskiDist(float clarity, float3 pos)
+                {
+                    float r;
+                    float scale = 2;
+                    float3 offset = 0.5;
+                    float3 normal = normalize(float3(1, 1, 0));
+                    
+                    float i;
+                    for (i = 0; i < 10 * clarity * _Resolution; i++) {                      
+                        pos = mul(rotationMatrixCos(_CosTime.x), pos);
 
-            #if defined(_BOX_MENGER) || defined(_BOX_LERP)
-                float3 mengerizePos(float3 pos, float offset) {
-                    pos = abs(pos);
+                        pos = fold(normal.xyz, pos);
+                        pos = fold(normal.yzx, pos);
+                        pos = fold(normal.zxy, pos);
 
-                    pos -= offset/2;
-                    pos = abs(pos);
-                    pos += offset/2;
-
-                    pos -= offset;
-                    return pos;
-                }
-
-                float mengerDist(float clarity, float3 pos) {
-                    float cube = cubeDist(pos);
-                    uint maxLevel = clarity * _Resolution * 10;
-                    uint size = 3;
-                    float offset = 1;
-                    float dist = pillarXYZDist(pos*size)/size;
-                    float3 posX = pos, posY = pos, posZ = pos;
-
-                    for (uint level = 0; level < maxLevel; level++){
-                        size *= 3;
-                        offset /= 3;
-                        // posX = mengerizeXPos(posX, offset);
-                        // posY = mengerizeYPos(posY, offset);
-                        // posZ = mengerizeZPos(posZ, offset);
-                        // dist = min(dist, min3(
-                        // pillarXDist(posX*size)/size,
-                        // pillarYDist(posY*size)/size,
-                        // pillarZDist(posZ*size)/size
-                        // ));
-                        pos = mengerizePos(pos, offset);
-                        dist = min(dist, pillarXYZDist(pos*size)/size);
-                    }
-                    // return cube;
-                    // return dist;
-                    return max(cube, -dist);
-                    // return max(cube, -pillarXDist(pos)/9);
+                        pos = pos*scale - offset*(scale - 1);	
+                    } 
+                    return (length(pos) - offset) * pow(scale, -i);
                 }
             #endif
 
-            #if defined(_BOX_MANDELBOX) || defined(_BOX_LERP)
-                #define minRadius2 0.25
-                #define fixedRadius2 1.9
-                float3 boxFold (float3 pos) {
-                    return clamp(pos, -1, 1) * 2 - pos;
-                }
-
-                float dot2 (float3 x) {
-                    return dot(x,x);
-                }
-
-                float sphereFold (float3 pos) {
-                    float r2 = dot(pos, pos);
-                    return // r2 < minRadius2? fixedRadius2/minRadius2: // linear inner scaling
-                    // (r2 < fixedRadius2 ?
-                    max(1, fixedRadius2/max(r2,minRadius2))//: // this is the actual sphere inversion
-                    // 1)
-                    ;
-                }
-
-                float mandelBoxDist(float clarity, float3 pos) {
-                    float3 initPos = pos;
-                    uint maxLevel = 5 + _Resolution * 10 * clarity;
-                    float scale = -2.5;//_SinTime.y;
-                    float offset = 1;
-                    float coef = 1;
+            #if defined(_BOX_MENGER) || defined(_BOX_LERP)
+                float mengerDist(float clarity, float3 pos)
+                {
                     float r;
-                    for (uint i = 0; i < maxLevel; i++) {
-                        pos = boxFold(pos);
-                        coef = sphereFold(pos);
-                        pos *= coef;
-                        offset *= coef;
-                        pos = scale * pos + initPos;
-                        offset = offset * abs(scale) + 1;
-                    }
-                    return (length(pos)/abs(offset));
+                    float scale = 3;
+                    float3 offset = 0.5;
+                    float3 normal = normalize(float3(1, -1, 0));
+                    
+                    float i;
+                    for (i = 0; i <  10 * clarity * _Resolution; i++) {                      
+                        // pos = mul(rotationMatrixCos(_CosTime.x), pos);
+                        pos = abs(pos);
+                        pos = fold(normal.xyz, pos);
+                        pos = fold(normal.xzy, pos);
+                        pos = fold(normal.zxy, pos);
+                        pos.xy = pos.xy*scale - offset.xy*(scale - 1);	
+                        
+                        pos.z -= 0.5*offset.z*(scale-1)/scale;
+                        pos.z = -abs(pos.z);
+                        pos.z += 0.5*offset.z*(scale-1)/scale;
+                        pos.z = scale*pos.z;
+                       
+                    } 
+                    return cubeDist(pos) * pow(scale, -i);
                 }
+            #endif
+
+            #if defined(_BOX_MANDELBOX) || defined(_BOX_LERP)               
+                float4 boxFoldDR(float4 posDR) {
+                    return float4(clamp(posDR.xyz, -0.25, 0.25) * 2 - posDR.xyz, posDR.w);
+                }
+
+                float4 sphereFoldDR (float4 posDR) {
+                    float R2 = square(0.25);
+                    float r2 = square(posDR.xyz);
+                    return (r2 < R2? R2/r2: 1) * posDR;
+                }
+                
+                float mandelBoxDist(float clarity, float3 pos) {
+                    // uint maxLevel = _Resolution * 100;
+                    float scale = -3 + _CosTime.y;
+                    float absScale = abs(scale);
+                    float4 offset = float4(pos, 1);
+                    float4 posDR = float4(pos, 1);
+                    for(uint j = 0; j < 10 * clarity * _Resolution; j++){
+
+                        posDR = sphereFoldDR(boxFoldDR(posDR));
+                        posDR.xyz = scale*posDR.xyz + offset.xyz;
+                        posDR.w = absScale*posDR.w + offset.w;
+                    }
+                    return cubeDist(posDR.xyz)/posDR.w;
+                }
+
                 #undef minRadius2
                 #undef fixedRadius2
             #endif
 
             float sceneDist(float clarity, float3 pos) {
-                #ifdef _BOX_MENGER
+                #ifdef _BOX_SIERPINSKI
+                    return sierpinskiDist(clarity, pos);
+                #elif _BOX_MENGER
                     return mengerDist(clarity, pos);
                 #elif _BOX_MANDELBOX
-                    return mandelBoxDist(clarity, pos*4)/4;
+                    return mandelBoxDist(clarity, pos);
                 #elif _BOX_LERP
                     return lerp(
                     mengerDist(clarity, pos),
-                    mandelBoxDist(clarity, pos*4)/4,
-                    (_SinTime.y+1)/2
-                    );
+                    mandelBoxDist(clarity, pos),
+                    0.5*(1 - _CosTime.y)
+                    );       
                 #endif
             }
 

@@ -7,9 +7,9 @@ Material:
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_Name: DEBUG
+  m_Name: Sierpinski
   m_Shader: {fileID: 4800000, guid: 1e6581eb61a374349b10ff5be5618f8c, type: 3}
-  m_ShaderKeywords: _BOXTYPE_MENGER _BOX_MENGER _DEBUG_ON _SHADOW_OFF
+  m_ShaderKeywords: _BOX_SIERPINSKI _DEBUG_OFF _SHADOW_OFF
   m_LightmapFlags: 4
   m_EnableInstancingVariants: 0
   m_DoubleSidedGI: 0
@@ -57,25 +57,21 @@ Material:
         m_Offset: {x: 0, y: 0}
     m_Floats:
     - _BOX: 0
-    - _BOXTYPE: 0
-    - _BoxType: 0
     - _BumpScale: 1
     - _Cutoff: 0.5
-    - _DEBUG: 1
+    - _DEBUG: 0
     - _DetailNormalMapScale: 1
     - _DstBlend: 0
     - _GlossMapScale: 1
     - _Glossiness: 0.5
     - _GlossyReflections: 1
-    - _MaxDistance: 0.355
+    - _MaxDistance: 0.1
     - _Metallic: 0
     - _Mode: 0
     - _OcclusionStrength: 1
     - _Parallax: 0.02
-    - _Resolution: 0
+    - _Resolution: 0.3
     - _SHADOW: 0
-    - _Shadow: 1
-    - _Size: 1
     - _SmoothnessTextureChannel: 0
     - _SpecularHighlights: 1
     - _SrcBlend: 1
@@ -83,5 +79,5 @@ Material:
     - _ZWrite: 1
     m_Colors:
     - _BackGround: {r: 0, g: 0, b: 0, a: 1}
-    - _Color: {r: 1, g: 1, b: 0, a: 1}
+    - _Color: {r: 1, g: 0, b: 0, a: 1}
     - _EmissionColor: {r: 0, g: 0, b: 0, a: 1}

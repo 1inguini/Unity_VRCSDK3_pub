@@ -9,7 +9,7 @@ Material:
   m_PrefabAsset: {fileID: 0}
   m_Name: MandelBox
   m_Shader: {fileID: 4800000, guid: 1e6581eb61a374349b10ff5be5618f8c, type: 3}
-  m_ShaderKeywords: _BOXTYPE_MENGER _BOX_MANDELBOX _SHADOW_OFF
+  m_ShaderKeywords: _BOXTYPE_MENGER _BOX_MANDELBOX _DEBUG_OFF _SHADOW_OFF
   m_LightmapFlags: 4
   m_EnableInstancingVariants: 0
   m_DoubleSidedGI: 0
@@ -56,22 +56,23 @@ Material:
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     m_Floats:
-    - _BOX: 1
+    - _BOX: 2
     - _BOXTYPE: 0
     - _BoxType: 0
     - _BumpScale: 1
     - _Cutoff: 0.5
+    - _DEBUG: 0
     - _DetailNormalMapScale: 1
     - _DstBlend: 0
     - _GlossMapScale: 1
     - _Glossiness: 0.5
     - _GlossyReflections: 1
-    - _MaxDistance: 0.1
+    - _MaxDistance: 0.039
     - _Metallic: 0
     - _Mode: 0
     - _OcclusionStrength: 1
     - _Parallax: 0.02
-    - _Resolution: 0.3
+    - _Resolution: 1
     - _SHADOW: 0
     - _Shadow: 1
     - _Size: 1

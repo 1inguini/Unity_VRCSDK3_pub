@@ -6,6 +6,8 @@
     float _MaxDistance;
     float _Resolution;
 
+    float sceneDist(float clarity, float3 pos);
+
     struct appdata
     {
         float4 vertex : POSITION;
@@ -17,7 +19,7 @@
         // float2 uv : TEXCOORD0;
         // UNITY_FOG_COORDS(1)
         float4 pos : POSITION1;
-        // float4 vertex : SV_POSITION;
+        float4 vertex : SV_POSITION;
     };
 
     struct fragout
@@ -29,10 +31,10 @@
     // sampler2D _MainTex;
     // float4 _MainTex_ST;
 
-    v2f vert (appdata v, out float4 vertex : SV_POSITION)
+    v2f vert (appdata v)
     {
         v2f o;
-        vertex = UnityObjectToClipPos(v.vertex);
+        o.vertex = UnityObjectToClipPos(v.vertex);
         #ifdef WORLD
             // メッシュのワールド座標を代入
             o.pos = mul(unity_ObjectToWorld, v.vertex);
@@ -61,9 +63,19 @@
         return sin(UNITY_HALF_PI*x);
     }
 
+    float3 fold(float3 normal, float3 pos) {
+        return pos - 2*min(0, dot(pos, normal))*normal;
+    }
+    
+    float3 sphereFold (float radius, float3 pos) {
+        float R2 = square(radius);
+        float r2 = square(pos);
+        return (r2 < R2? R2/r2: 1)*pos;
+    }
+    
     float3 repeat(float3 pos){
         float size = 4;
-        pos -= round(pos/ size);
+        pos -= round(pos/size);
         return pos;
     }
 
@@ -82,7 +94,85 @@
         float2x2 m = float2x2(x,x,-x,x);
         return mul(m, pos);
     }
+    
+    float4x4 rodriguesMatrixCosSin(float3 n, float cosT, float sinT) {
+        float3 sq = float3(n.x*n.x, n.y*n.y, n.z*n.z);
+        float3 adj = float3(n.x*n.y, n.y*n.z, n.z*n.x);
+        float r = 1 - cosT;
+        return float4x4(
+        cosT + sq.x*r, adj.x*r - n.z*sinT, adj.z*r + n.y*sinT, 0,
+        adj.x*r + n.z*sinT, cosT + sq.y*r, adj.y*r - n.x*sinT, 0,
+        adj.z*r - n.y*sinT, adj.y*r + n.x*sinT, cosT + sq.z*r, 0,
+        0, 0, 0, 1
+        );
+    }
+    float4x4 rodriguesMatrix(float3 n, float theta) {
+        float sinT = sin(theta);
+        float cosT = cos(theta);
+        return rodriguesMatrixCosSin(n,cosT,sinT);
+    }
+    float4x4 rodriguesMatrixCos(float3 n, float cosT) {
+        float sinT = sqrt(1-square(cosT));
+        return rodriguesMatrixCosSin(n,cosT,sinT);
+    }
 
+    float4x4 rotationMatrix(float x, float y, float z) {
+        float s, c;
+        s = sin(x);
+        c = cos(x);
+        float4x4 o = float4x4(1,0,0,0, 0,c,-s,0, 0,s,c,0, 0,0,0,1);
+        s = sin(y);
+        c = cos(y);
+        o = mul(o, float4x4(c,0,s,0, 0,1,0,0, -s,0,c,0, 0,0,0,1));
+        s = sin(z);
+        c = cos(z);
+        o = mul(o, float4x4(c,-s,0,0, s,c,0,0, 0,0,1,0, 0,0,0,1));
+        return o;                
+    }
+    float4x4 rotationMatrix(float3 thetas) {
+        return rotationMatrix(thetas.x, thetas.y, thetas.z);                
+    }
+    float4x4 rotationMatrixCos(float cosx, float cosy, float cosz) {
+        float c, s;
+        c = cosx;
+        s = sqrt(1 - square(cosx));
+        float4x4 o = float4x4(1,0,0,0, 0,c,-s,0, 0,s,c,0, 0,0,0,1);
+        c = cosy;
+        s = sqrt(1 - square(cosy));
+        o = mul(o, float4x4(c,0,s,0, 0,1,0,0, -s,0,c,0, 0,0,0,1));
+        c = cosz;
+        s = sqrt(1 - square(cosz));
+        o = mul(o, float4x4(c,-s,0,0, s,c,0,0, 0,0,1,0, 0,0,0,1));
+        return o;     
+    }
+    float4x4 rotationMatrixCos(float3 coss) {
+        return rotationMatrixCos(coss.x, coss.y, coss.z);                
+    }
+
+    float4x4 shiftMatrix(float x, float y, float z) {
+        float4x4 mat = 0;
+        mat[0][3] = x;
+        mat[1][3] = y;
+        mat[2][3] = z;
+        mat[3][3] = 1;
+        // mat[3] = float4(pos,1);
+        return mat; // + float4x4(0,0,0,pos.x, 0,0,0,pos.y, 0,0,0,pos.z, 0,0,0,0)
+    }
+    float4x4 shiftMatrix(float3 pos) {
+        return shiftMatrix(pos.x, pos.y, pos.z);
+    }
+
+    float4x4 scaleMatrix(float x, float y, float z) {
+        float4x4 mat = 0;
+        mat[0][0] = x;
+        mat[1][1] = y;
+        mat[2][2] = z;
+        mat[3][3] = 1;
+        return mat;
+    }
+    float4x4 scaleMatrix(float3 scale) {
+        return scaleMatrix(scale.x, scale.y, scale.z);
+    }
 
     float sphereDist(float3 pos){
         return length(pos) - 0.5;
@@ -114,19 +204,20 @@
         );
     }
     
-    #define EPS 0.0001
-    
+    #define EPS 0.00001
+
     float3 getSceneNormal(float3 pos){
-        // float def = sceneDist(pos);
+        float def = sceneDist(1, pos);
         float3 delta = float3(EPS, 0, 0);
         return normalize(float3(
-        sceneDist(1, pos + delta.xyz) - sceneDist(1, pos - delta.xyz),
-        sceneDist(1, pos + delta.yzx) - sceneDist(1, pos - delta.xyz),
-        sceneDist(1, pos + delta.zxy) - sceneDist(1, pos - delta.xyz)
+        sceneDist(1, pos + delta.xyz) - def,
+        sceneDist(1, pos + delta.yzx) - def,
+        sceneDist(1, pos + delta.zxy) - def
         ));
     }
 
-    /* https://qiita.com/RamType0/items/baf2b9d5ce0f9fc458be {
+
+    // https://qiita.com/RamType0/items/baf2b9d5ce0f9fc458be {
         float3 ScaleOf(in float3x3 mat){
             return float3(length(mat._m00_m10_m20),length(mat._m01_m11_m21),length(mat._m02_m12_m22));
         }
@@ -147,6 +238,7 @@
             return RotationOf((float3x3)mat,scale);
         }
 
+
         float4x4 BuildMatrix(in float3x3 mat,in float3 offset)
         {
             return float4x4(
@@ -163,7 +255,6 @@
             ret._m02_m12_m22 = column2;
             return ret;
         }
-
         //ベクトルを線形球面補間しますが、入力ベクトルは正規化されている必要があり、戻り値のベクトルは正規化されていません。
         //Abnormal・・・？
         float3 SlerpAbnormal(float3 normalizedA,float3 normalizedB,float t){
@@ -173,7 +264,10 @@
             float bP = sin(angle * t);
             return angle ? (aP * normalizedA + bP * normalizedB) : normalizedA;
         }
-        
+        //ベクトルを球面線形補間します。
+        float3 Slerp(float3 a,float3 b,float t){
+            return normalize(SlerpAbnormal(normalize(a),normalize(b),t));
+        }
         //回転行列を球面線形補間します。
         float3x3 Slerp(in float3x3 a ,in float3x3 b,in float t){
             //OpenGLは列優先メモリレイアウトなのでこのままでOK
@@ -234,30 +328,31 @@
                 return float3x3(ix,iy,iz);
             #endif
 
-            #if defined(USING_STEREO_MATRICES)
-                #define FACEDIR TRMatrixAverage(unity_StereoCameraToWorld[0],unity_StereoCameraToWorld[1])
-                #define StereoWorldSpaceEyeRotation (float3x3)unity_StereoCameraToWorld
-                #define WorldSpaceFaceRotation RMatrixAverage(StereoWorldSpaceEyeRotation[0],StereoWorldSpaceEyeRotation[1])
-
-                float3 FaceToWorldPos(float3 pos) {return mul(FaceToWorld,float4(pos,1)).xyz;}
-
-                float3 ObjectToFaceAlignedWorldPosUnscaled(in float3 pos)
-                {
-                    float3 ret = mul(WorldSpaceFaceRotation,pos);//ワールド空間でのカメラの向きに回転
-                    ret += PositionOf(unity_ObjectToWorld);//オブジェクトのワールド座標を加算
-                    return ret;
-                }
-                float3 ObjectToFaceAlignedWorldPos(float3 pos)
-                {
-                    pos *= ScaleOf(unity_ObjectToWorld);//unity_ObjectToWorldからのスケールの抽出、適応
-                    return ObjectToFaceAlignedWorldPosUnscaled(pos);
-                }
-            #else
-                // #define FACEDIR -UNITY_MATRIX_V[2].xyz
-                #define FACEDIR unity_WorldToCamera[2].xyz
-            #endif
         }
-    // } */
+        //移動、回転行列の平均を求めます。InterpolateTRMatrix(a,b,0.5)より遥かに高速です。
+        float4x4 TRMatrixAverage(in float4x4 a,in float4x4 b){
+            return BuildMatrix(RMatrixAverage((float3x3)a,(float3x3)b),(PositionOf(a)+PositionOf(b))*0.5);
+        }
+        #if defined(USING_STEREO_MATRICES)
+            #define StereoWorldSpaceEyeRotation (float3x3)unity_StereoCameraToWorld
+            #define FaceToWorld TRMatrixAverage(unity_StereoCameraToWorld[0],unity_StereoCameraToWorld[1])
+            #define WorldSpaceFaceRotation RMatrixAverage(StereoWorldSpaceEyeRotation[0],StereoWorldSpaceEyeRotation[1])
+
+            float3 FaceToWorldPos(float3 pos) {return mul(FaceToWorld,float4(pos,1)).xyz;}
+
+            float3 ObjectToFaceAlignedWorldPosUnscaled(in float3 pos)
+            {
+                float3 ret = mul(WorldSpaceFaceRotation,pos);//ワールド空間でのカメラの向きに回転
+                ret += PositionOf(unity_ObjectToWorld);//オブジェクトのワールド座標を加算
+                return ret;
+            }
+            float3 ObjectToFaceAlignedWorldPos(float3 pos)
+            {
+                pos *= ScaleOf(unity_ObjectToWorld);//unity_ObjectToWorldからのスケールの抽出、適応
+                return ObjectToFaceAlignedWorldPosUnscaled(pos);
+            }
+        #endif
+    // }
 
     struct marchResult {
         float totalDist;
@@ -265,33 +360,22 @@
         float3 pos;
         float iter;
     };
-
+    
     marchResult raymarch (float clarity, float3 pos, float3 rayDir) {
         marchResult o;
 
-        // #ifdef WORLD
-        //     float clarity = dot(rayDir, FACEDIR);
-        // #else // #elif OBJECT
-        //     float clarity = dot(rayDir, mul((float3x3)unity_WorldToObject, FACEDIR));
-        // #endif
-        
         float maxDist = 1000 * _MaxDistance;
-        float minDist = (EPS + 1 - blurstep(clarity)); //pow(3*clarity, -12);
-        // float minDist = EPS+0.01*blurstep(clarity);
-        float initMinDist = minDist;
-        // float minDist = EPS;
+        float minDist = (EPS + 1 - blurstep(blurstep(clarity)));
         o.pos = pos;
         o.totalDist = 0;
         o.iter = 0;
         float marchingDist;
         do {
-            marchingDist = abs(sceneDist(clarity, o.pos));
+            marchingDist = sceneDist(clarity, o.pos);
             o.totalDist += marchingDist;
             o.pos += marchingDist*rayDir;
-            minDist += square(0.01*marchingDist);
-            clarity -= square(0.01*marchingDist);
             o.iter++;
-        } while (minDist < marchingDist && o.totalDist < maxDist);
+        } while (minDist <= marchingDist && o.totalDist < maxDist && marchingDist < 0.5*maxDist);
         o.intersect = marchingDist < minDist;
         return o;
     }
@@ -337,8 +421,7 @@
         return result;
     }
 
-    fixed4 lighting(float3 pos, fixed shadow, fixed4 col) {
-        float3 normal = getSceneNormal(pos);
+    fixed4 lighting(float3 pos, float3 normal, fixed shadow, fixed4 col) {
 
         float3 lightDir;
         #ifdef WORLD
@@ -373,11 +456,14 @@
         return fixed4(lerp(col.rgb*(ambient? ambient: 0.1), col.rgb, shadow * lighting), col.a);
     }
 
+    bool nearlyEq(float x, float y) {
+        return x - EPS <= y && y <= x + EPS;
+    }
 
-    fragout frag (v2f i, UNITY_VPOS_TYPE screenPos : VPOS)
+    fragout frag (v2f i)
     {
         fragout o;
-        
+
         float3 pos;
         #ifdef WORLD
             pos = _WorldSpaceCameraPos;
@@ -392,9 +478,10 @@
         float3 rayDir = normalize(i.pos.xyz - pos);
         marchResult result = raymarch(
         #if defined(UNITY_SINGLE_PASS_STEREO)
-            blurstep(blurstep(1 - (1.2*abs(screenPos.x/_ScreenParams.x - 1)))),
+            abs(dot(rayDir, normalize(mul(unity_WorldToObject, mul(FaceToWorld, float3(0,0,1)))))),
         #else
-            blurstep(blurstep(1-0.7*distance(0.5, screenPos.xy/_ScreenParams.xy))),
+            abs(dot(rayDir, normalize(mul(unity_WorldToObject, mul((float3x3)unity_CameraToWorld, float3(0,0,1)))))),
+            // blurstep(blurstep(1-1.25*distance(float2(0.5, 0.45), screenPos.xy/_ScreenParams.x))),
         #endif
         pos,
         rayDir
@@ -414,26 +501,32 @@
         #endif
         o.depth = projectionPos.z / projectionPos.w;
 
-        rayDir = mul(unity_WorldToObject, _WorldSpaceLightPos0).xyz;
         o.color.a = _Color.a;
         o.color.rgb = rgb2hsv(_Color.rgb);
         o.color.r = frac(o.color.r + result.iter*abs(_CosTime.w)/90.0);
         o.color.rgb = (hsv2rgb(o.color.rgb));
+        
+        float3 normal = getSceneNormal(pos - 10*EPS*rayDir);
+
         #ifdef _SHADOW_ON
+            rayDir = mul(unity_WorldToObject, _WorldSpaceLightPos0).xyz;
             o.color = lighting(
             pos, 
+            normal,
             shadowmarch(pos + rayDir * 10 * EPS, rayDir),
             o.color
             );
         #else // #elif _SHADOW_OFF
-            o.color = lighting(pos, 1, o.color);
+            o.color = lighting(pos, normal, 1, o.color);
         #endif
         #if defined(_DEBUG_ON)
             #if defined(UNITY_SINGLE_PASS_STEREO)
-                o.color.rgb = blurstep(blurstep(1 - (1.2*abs(screenPos.x/_ScreenParams.x - 1))));
+                o.color.rgb = 1 - abs(dot(rayDir, normalize(mul(unity_WorldToObject, mul(FaceToWorld, float3(0,0,1))))));
             #else
-                o.color.rgb = blurstep(blurstep(1 - (1.2*abs(screenPos.x/_ScreenParams.x - 1))));
+                // o.color.rgb = blurstep(blurstep(1-1.25*distance(float2(0.5, 0.45), screenPos.xy/_ScreenParams.xy)));
+                o.color.rgb = 1 - abs(dot(rayDir, normalize(mul(unity_WorldToObject, mul((float3x3)unity_CameraToWorld, float3(0,0,1))))));
             #endif
+            o.depth=1;
         #endif
         return o;
     }
