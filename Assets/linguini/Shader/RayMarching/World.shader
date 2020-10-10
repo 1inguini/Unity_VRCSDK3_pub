@@ -1,4 +1,4 @@
-﻿Shader "linguini/RayMarching/Box"
+﻿Shader "linguini/RayMarching/World"
 {
     Properties
     {
@@ -44,21 +44,28 @@
 
             #include "Raymarching.cginc"
             
-            inline float4 colorize(v2f i, marchResult m, float4 color) {
-                return distColor(m, color);
+                        
+            float4 colorize(v2f i, marchResult m, float4 color) {
+                float4 o;
+                o = color;
+                o.rgb = rgb2hsv(color.rgb);
+                o.r = frac(o.r + m.iter*abs(_CosTime.w)/90.0);
+                o.rgb = (hsv2rgb(o.rgb));
+                return o;                
             }
 
             #if defined(_BOX_SIERPINSKI) || defined(_BOX_LERP)
                 float sierpinskiDist(float clarity, float3 pos)
                 {
                     float r;
-                    float scale = 2; // 1.75 + 0.25*_CosTime.w;
+                    float scale = 2;
                     float3 offset = 0.5;
                     float3 normal = normalize(float3(1, 1, 0));
                     
                     float i;
                     for (i = 0; i < 10 * clarity * _Resolution; i++) {                      
-                        pos = mul(rotationMatrix(_Time.y/5.0), pos);
+                        // pos = mul(rotationMatrixCos(_CosTime.x), pos);
+
                         pos = fold(normal.xyz, pos);
                         pos = fold(normal.yzx, pos);
                         pos = fold(normal.zxy, pos);
@@ -129,6 +136,7 @@
             float sceneDist(float clarity, float3 pos) {
                 #ifdef _BOX_SIERPINSKI
                     return sierpinskiDist(clarity, pos);
+                    // return tetrahedronDist(clarity, (pos));
                 #elif _BOX_MENGER
                     return mengerDist(clarity, pos);
                 #elif _BOX_MANDELBOX
