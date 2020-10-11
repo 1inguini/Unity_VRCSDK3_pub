@@ -41,6 +41,7 @@
             #pragma multi_compile WORLD
             // #pragma multi_compile OBJECT
             #pragma multi_compile BACKGROUND
+            #pragma multi_compile NODEPTH
             #pragma multi_compile _SHADOW_OFF
 
             #include "UnityCG.cginc"

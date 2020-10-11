@@ -2,7 +2,6 @@
 {
     Properties
     {
-        _Size ("Size", Range(0,1)) = 0.5
         // _MainTex ("Texture", 2D) = "white" {}
         _Color ("Color", Color) = (1,1,1)
         _BackGround ("BackGround", Color) = (0,0,0)
@@ -18,7 +17,7 @@
         Pass
         {
             //アルファ値が機能するために必要
-            Blend SrcAlpha OneMinusSrcAlpha
+            // Blend SrcAlpha OneMinusSrcAlpha
 
             CGPROGRAM
             #pragma vertex vert
@@ -40,13 +39,14 @@
 
             float sceneDist(float clarity, float3 pos){
                 float time = 2*_Time.x;
-                pos.yz = rotate(pos.yz, time);
-                pos.zx = rotate(pos.zx, time);
-                pos.xy = rotate(pos.xy, time);
-                pos = repeat(2, pos);
-                pos.yz = rotate(pos.yz, _Time.y);
-                pos.zx = rotate(pos.zx, _Time.y);
-                pos.xy = rotate(pos.xy, _Time.y);
+                // pos.yz = rotate(pos.yz, time);
+                // pos.zx = rotate(pos.zx, time);
+                // pos.xy = rotate(pos.xy, time);
+                pos = repeat(10*_MaxDistance, pos);
+                // pos.yz = rotate(pos.yz, _Time.y);
+                // pos.zx = rotate(pos.zx, _Time.y);
+                // pos.xy = rotate(pos.xy, _Time.y);
+                return sphereDist(pos/_Size)*_Size;
                 return cubeDist(pos/_Size)*_Size;
             }
             ENDCG

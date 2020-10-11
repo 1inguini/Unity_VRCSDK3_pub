@@ -1,6 +1,8 @@
 #ifndef RAYMARCHING_INCLUDED
     #define RAYMARCHING_INCLUDED
 
+    #include "Lighting.cginc"
+    
     #ifdef WORLD
         float _Size;
     #endif
@@ -34,7 +36,7 @@
     struct fragout
     {
         fixed4 color : SV_Target;
-        #if !defined(BACKGROUND)
+        #if !defined(NODEPTH)
             float depth : SV_Depth;
         #endif
     };
@@ -85,7 +87,8 @@
     }
     
     inline float3 repeat(float interval, float3 pos){
-        pos -= round(pos/interval)*interval;
+        // pos -= round(pos/interval)*interval;
+        pos = (frac(pos/interval + 0.5) - 0.5)*interval;
         return pos;
     }
 
@@ -187,7 +190,12 @@
     inline float sphereDist(float3 pos){
         return length(pos) - 0.5;
     }
-
+    
+    inline float torusDist(float innerRatio, float3 pos){
+        pos.xz = length(pos.xz) - 0.5;
+        return length(pos) - innerRatio;
+    }
+    
     inline float cubeDist(float3 pos){
         float3 q = abs(pos) - 0.5;
         return length(max(q, 0)) + min(max(q.x, max(q.y, q.z)), 0);
@@ -235,6 +243,7 @@
         //     sceneDist(clarity, pos + delta.yzx) - def
         //     ));
     // }
+
     inline float3 getSceneNormal(float clarity, float3 pos){
         // float def = sceneDist(clarity, pos);
         float2 delta = float2(EPS, -EPS);
@@ -380,6 +389,8 @@
                 pos *= ScaleOf(unity_ObjectToWorld);//unity_ObjectToWorldからのスケールの抽出、適応
                 return ObjectToFaceAlignedWorldPosUnscaled(pos);
             }
+        #else
+            #define FaceToWorld (float3x3)unity_CameraToWorld
         #endif
     // }
 
@@ -444,9 +455,7 @@
         [unroll(35)] for (uint i = 0; i < 35; i++)
         {
             marchingDist = abs(sceneDist(1, pos));
-            if (marchingDist < EPS){
-                return 0;
-            }
+            if (marchingDist < 100*EPS) return 0;
 
             totalDist += marchingDist;
             pos += marchingDist * rayDir;
@@ -455,7 +464,7 @@
         return result;
     }
 
-    fixed4 lighting(float3 pos, float3 normal, fixed shadow, fixed4 col) {
+    float4 lighting(float3 pos, float3 normal, fixed shadow, fixed4 col) {
 
         float3 lightDir;
         #ifdef WORLD
@@ -464,15 +473,17 @@
             //ローカル座標で計算しているので、ディレクショナルライトの角度もローカル座標にする
             lightDir = mul(unity_WorldToObject, _WorldSpaceLightPos0).xyz;
         #else
-            lightDir = normalize(float3(1,-1,0));
+            lightDir = float3(1,-1,0);
         #endif
+        lightDir = normalize(lightDir);
 
         // lightDir = normalize(mul(unity_WorldToObject,_WorldSpaceLightPos0)).xyz;
-        float NdotL = saturate(dot(normal, lightDir));
+        float lightStrength = pow(0.5*(1 + (dot(normal, lightDir))), 3);
+        // float lightStrength = saturate(dot(normal, lightDir));
 
         float3 lightProbe = ShadeSH9(fixed4(UnityObjectToWorldNormal(normal), 1));
 
-        float3 lighting = lerp(lightProbe, _LightColor0, NdotL);
+        float3 lighting = lerp(lightProbe, _LightColor0, lightStrength);
         
         float3 ambient = Shade4PointLights(
         unity_4LightPosX0, 
@@ -486,8 +497,8 @@
         pos, 
         normal);
 
-        // return fixed4(lerp(col.rgb*0.01, col.rgb, shadow) * lighting + (ambient? ambient: 0.1), col.a);
-        return fixed4(lerp(col.rgb*(ambient? ambient: 0.1), col.rgb, shadow * lighting), col.a);
+        // return float4(lerp(col.rgb*0.01, col.rgb, shadow) * lighting + (ambient? ambient: 0.1), col.a);
+        return float4(lerp(col.rgb*(ambient? ambient: 0.1), col.rgb, shadow * lighting), col.a);
     }
 
     bool nearlyEq(float x, float y) {
@@ -522,10 +533,10 @@
         // レイの進行方向
         float3 rayDir = normalize(i.pos.xyz - pos);
         
-        #if defined(UNITY_SINGLE_PASS_STEREO)
+        #ifdef WORLD
+            float clarity = abs(dot(rayDir, normalize(mul(FaceToWorld, float3(0,0,1)))));
+        #else // #ifdef OBJECT
             float clarity = abs(dot(rayDir, normalize(mul(unity_WorldToObject, mul(FaceToWorld, float3(0,0,1))))));
-        #else
-            float clarity = abs(dot(rayDir, normalize(mul(unity_WorldToObject, mul((float3x3)unity_CameraToWorld, float3(0,0,1))))));
             // blurstep(blurstep(1-1.25*distance(float2(0.5, 0.45), screenPos.xy/_ScreenParams.x))),
         #endif
 
@@ -549,18 +560,21 @@
         #ifdef BACKGROUND
             o.color = result.intersect? colorize(i, result, _Color): _BackGround;
         #else
-            o.depth = projectionPos.z / projectionPos.w;
             o.color = colorize(i, result, _Color);
         #endif
         
-        float3 normal = getSceneNormal(clarity, pos - 10*EPS*rayDir);
+        #if !defined(NODEPTH)
+            o.depth = projectionPos.z / projectionPos.w;
+        #endif
+
+        float3 normal = getSceneNormal(clarity, pos - 0.01*rayDir);
 
         #ifdef _SHADOW_ON
             rayDir = mul(unity_WorldToObject, _WorldSpaceLightPos0).xyz;
             o.color = lighting(
             pos, 
             normal,
-            shadowmarch(pos + rayDir * 10 * EPS, rayDir),
+            shadowmarch(pos + 0.01*rayDir, rayDir),
             o.color
             );
         #else // #elif _SHADOW_OFF
@@ -568,7 +582,6 @@
         #endif
         #if defined(_DEBUG_ON)            
             o.color.rgb = 1 - clarity;
-            o.depth=1;
         #endif
         return o;
     }

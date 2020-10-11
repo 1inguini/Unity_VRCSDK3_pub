@@ -39,7 +39,7 @@ Material:
     - _Red: 1
     - _SHADOW: 0
     - _Scale: 1
-    - _Size: 0.5
+    - _Size: 0.31
     - _TexIntensity: 0.5
     m_Colors:
     - _BackGround: {r: 0, g: 0, b: 0, a: 1}
