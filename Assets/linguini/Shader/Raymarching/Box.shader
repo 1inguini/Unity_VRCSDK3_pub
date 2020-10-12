@@ -42,104 +42,119 @@
             #include "UnityCG.cginc"
             #include "Lighting.cginc"
 
+            #define CAMERA_SPACING 0.1
             #include "Raymarching.cginc"
             
-            inline float4 colorize(v2f i, marchResult m, float4 color) {
+            inline half4 colorize(v2f i, marchResult m, half4 color) {
                 return distColor(m, color);
             }
 
             #if defined(_BOX_SIERPINSKI) || defined(_BOX_LERP)
-                float sierpinskiDist(float clarity, float3 pos)
+                half sierpinskiDist(distIn din)
                 {
-                    float r;
-                    float scale = 2; // 1.75 + 0.25*_CosTime.w;
-                    float3 offset = 0.5;
-                    float3 normal = normalize(float3(1, 1, 0));
+                    half r;
+                    half scale = 2; // 1.75 + 0.25*_CosTime.w;
+                    half3 offset = 0.5;
+                    half3 normal = normalize(half3(1, 1, 0));
                     
-                    float i;
-                    for (i = 0; i < 10 * clarity * _Resolution; i++) {                      
-                        pos = mul(rotationMatrix(_Time.y/5.0), pos);
-                        pos = fold(normal.xyz, pos);
-                        pos = fold(normal.yzx, pos);
-                        pos = fold(normal.zxy, pos);
+                    half i;
+                    for (i = 0; i < 10 * din.clarity * _Resolution; i++) {                      
+                        din.pos = mul(rotationMatrix(_Time.y/5.0), din.pos);
+                        din.pos = fold(normal.xyz, din.pos);
+                        din.pos = fold(normal.yzx, din.pos);
+                        din.pos = fold(normal.zxy, din.pos);
 
-                        pos = pos*scale - offset*(scale - 1);	
+                        din.pos = din.pos*scale - offset*(scale - 1);	
                     } 
-                    return tetrahedronDist(pos) * pow(scale, -i);
+                    return tetrahedronDist(din.pos) * pow(scale, -i);
                 }
             #endif
 
             #if defined(_BOX_MENGER) || defined(_BOX_LERP)
-                float mengerDist(float clarity, float3 pos)
+                half mengerDist(distIn din)
                 {
-                    float r;
-                    float scale = 3;
-                    float3 offset = 0.5;
-                    float3 normal = normalize(float3(1, -1, 0));
-                    
-                    float i;
-                    for (i = 0; i <  10 * clarity * _Resolution; i++) {                      
+                    half r;
+                    half scale = 3;
+                    half3 offset = 0.5;
+                    half3 normal = normalize(half3(1, -1, 0));
+
+                    half finalscale = 1;
+                    half i;
+                    for (
+                    i = 0;
+                    i <  10 * din.clarity * _Resolution &&
+                    din.pixSize < finalscale;
+                    i++)
+                    {                      
                         // pos = mul(rotationMatrixCos(_CosTime.x), pos);
-                        pos = abs(pos);
-                        pos = fold(normal.xyz, pos);
-                        pos = fold(normal.xzy, pos);
-                        pos = fold(normal.zxy, pos);
-                        pos.xy = pos.xy*scale - offset.xy*(scale - 1);	
+                        din.pos = abs(din.pos);
+                        din.pos = fold(normal.xyz, din.pos);
+                        din.pos = fold(normal.xzy, din.pos);
+                        din.pos = fold(normal.zxy, din.pos);
+                        din.pos.xy = din.pos.xy*scale - offset.xy*(scale - 1);	
                         
-                        pos.z -= 0.5*offset.z*(scale-1)/scale;
-                        pos.z = -abs(pos.z);
-                        pos.z += 0.5*offset.z*(scale-1)/scale;
-                        pos.z = scale*pos.z;
-                        
+                        din.pos.z -= 0.5*offset.z*(scale-1)/scale;
+                        din.pos.z = -abs(din.pos.z);
+                        din.pos.z += 0.5*offset.z*(scale-1)/scale;
+                        din.pos.z = scale*din.pos.z;
+                        finalscale /= scale;
                     } 
-                    return cubeDist(pos) * pow(scale, -i);
+                    return cubeDist(din.pos) * finalscale;
                 }
             #endif
 
             #if defined(_BOX_MANDELBOX) || defined(_BOX_LERP)               
-                float4 boxFoldDR(float size, float4 posDR) {
-                    return float4(clamp(posDR.xyz, -size, size) * 2 - posDR.xyz, posDR.w);
+                half4 boxFoldDR(half size, half4 posDR) {
+                    return half4(clamp(posDR.xyz, -size, size) * 2 - posDR.xyz, posDR.w);
                 }
 
-                float4 sphereFoldDR (float radius, float innerRadius, float4 posDR) {
-                    float R2 = square(radius);
-                    float r2 = square(posDR.xyz);
-                    float iR2 = square(innerRadius);
+                half4 sphereFoldDR (half radius, half innerRadius, half4 posDR) {
+                    half R2 = square(radius);
+                    half r2 = square(posDR.xyz);
+                    half iR2 = square(innerRadius);
                     return (r2 < iR2? R2/iR2: r2 < R2? R2/r2: 1) * posDR;
                 }
                 
-                float mandelBoxDist(float clarity, float3 pos) {
+                half mandelBoxDist(distIn din) {
                     // uint maxLevel = _Resolution * 100;
-                    float scale = -2.5 + 0.5*_CosTime.z;
-                    float absScale = abs(scale);
-                    float4 offset = float4(pos, 1);
-                    float4 posDR = float4(pos, 1);
-                    for(uint j = 0; j < 10 * clarity * _Resolution; j++){
-                        posDR = sphereFoldDR(0.25, 0.1, boxFoldDR(0.25, posDR));
+                    half scale = -2.5 + 0.5*_CosTime.z;
+                    half absScale = abs(scale);
+                    half4 offset = half4(din.pos, 1);
+                    half4 posDR = half4(din.pos, 1);
+                    half rcpPixSize = 1/din.pixSize;
+                    for(uint j = 0; j < 10 * din.clarity * _Resolution && posDR.w < rcpPixSize; j++){
+                        posDR = sphereFoldDR(0.25, 0.125, boxFoldDR(0.25, posDR));
                         posDR.xyz = scale*posDR.xyz + offset.xyz;
                         posDR.w = absScale*posDR.w + offset.w;
                     }
                     return cubeDist(posDR.xyz)/posDR.w;
                 }
 
-                #undef minRadius2
-                #undef fixedRadius2
             #endif
 
-            float sceneDist(float clarity, float3 pos) {
+            half sceneDist(distIn din) {
+                // half viewField = -sphereDist((pos-mul(unity_WorldToObject, half4(_WorldSpaceCameraPos, 1)).xyz)*10)/10;
+                // return torusDist(0.3, pos);
+                #if defined(USING_STEREO_MATRICES)
+                    half viewField = -sphereDist((mul(unity_ObjectToWorld, half4(din.pos, 1)).xyz - VR_WorldSpaceCameraPos)*10)/10;
+                #else
+                    half viewField = -sphereDist((mul(unity_ObjectToWorld, half4(din.pos, 1)).xyz - _WorldSpaceCameraPos)*10)/10;
+                #endif
+                return max(viewField,
                 #ifdef _BOX_SIERPINSKI
-                    return sierpinskiDist(clarity, pos);
+                    sierpinskiDist(din)
                 #elif _BOX_MENGER
-                    return mengerDist(clarity, pos);
+                    mengerDist(din)
                 #elif _BOX_MANDELBOX
-                    return mandelBoxDist(clarity, pos);
+                    mandelBoxDist(din)
                 #elif _BOX_LERP
-                    return lerp(
-                    mengerDist(clarity, pos),
-                    mandelBoxDist(clarity, pos),
+                    lerp(
+                    mengerDist(din),
+                    mandelBoxDist(din),
                     0.5*(1 - _CosTime.y)
                     );       
                 #endif
+                );
             }
 
             ENDCG

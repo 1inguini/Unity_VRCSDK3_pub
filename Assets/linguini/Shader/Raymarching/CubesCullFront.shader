@@ -31,23 +31,29 @@
             #include "UnityCG.cginc"
             #include "Lighting.cginc"
 
+            #define CAMERA_SPACING 0.1
+
             #include "Raymarching.cginc"
             
-            inline float4 colorize(v2f i, marchResult m, float4 color) {
+            inline half4 colorize(v2f i, marchResult m, half4 color) {
                 return color;
             }
 
-            float sceneDist(float clarity, float3 pos){
-                float time = 2*_Time.x;
-                // pos.yz = rotate(pos.yz, time);
-                // pos.zx = rotate(pos.zx, time);
-                // pos.xy = rotate(pos.xy, time);
+            half sceneDist(distIn din){
+                half3 pos = din.pos;
+                // half atField = sphereDist((pos-_WorldSpaceCameraPos)/5)*5;
+                half time = 2*_Time.x;
+                pos.yz = rotate(pos.yz, time);
+                pos.zx = rotate(pos.zx, time);
+                pos.xy = rotate(pos.xy, time);
                 pos = repeat(10*_MaxDistance, pos);
-                // pos.yz = rotate(pos.yz, _Time.y);
-                // pos.zx = rotate(pos.zx, _Time.y);
-                // pos.xy = rotate(pos.xy, _Time.y);
-                return sphereDist(pos/_Size)*_Size;
+                pos.yz = rotate(pos.yz, _Time.y);
+                pos.zx = rotate(pos.zx, _Time.y);
+                pos.xy = rotate(pos.xy, _Time.y);
+                // return sphereDist(pos/_Size)*_Size;
+                // return torusDist(0.05, pos);
                 return cubeDist(pos/_Size)*_Size;
+                // return max(-atField, cubeDist(pos/_Size)*_Size);
             }
             ENDCG
         }

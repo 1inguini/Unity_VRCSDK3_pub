@@ -9,7 +9,7 @@ Material:
   m_PrefabAsset: {fileID: 0}
   m_Name: LerpMengerMandelBox
   m_Shader: {fileID: 4800000, guid: 1e6581eb61a374349b10ff5be5618f8c, type: 3}
-  m_ShaderKeywords: _BOXTYPE_MENGER _BOX_LERP _SHADOW_OFF
+  m_ShaderKeywords: _BOXTYPE_MENGER _BOX_LERP _DEBUG_OFF _SHADOW_OFF
   m_LightmapFlags: 4
   m_EnableInstancingVariants: 0
   m_DoubleSidedGI: 0
