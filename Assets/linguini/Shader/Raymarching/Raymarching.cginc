@@ -511,20 +511,19 @@
     }
     
     #define K 16
-    fixed shadowmarch (half3 pos, half3 rayDir) {
+    fixed shadowmarch (distIn din, half3 rayDir) {
         // half maxDistance = 1; // 10 * _MaxDistance;
         // half3 initPos = pos;
         half result = 1;
         half marchingDist;
         half totalDist = 0;
-        distIn din = mkDistIn(0.5, 0.001, pos);
         [unroll(35)] for (uint i = 0; i < 35; i++)
         {
             marchingDist = abs(sceneDist(din));
             if (marchingDist < 100*EPS) return 0;
 
             totalDist += marchingDist;
-            pos += marchingDist * rayDir;
+            din.pos += marchingDist * rayDir;
             result = min(result, K * marchingDist / totalDist);
         }
         return result;
@@ -627,6 +626,7 @@
         #endif
 
         din.pos = result.pos;
+        din.clarity = result.clarity;
 
         half4 projectionPos;
         #ifdef WORLD
@@ -661,7 +661,7 @@
             o.color = lighting(
             din.pos, 
             normal,
-            shadowmarch(din.pos + 0.01*rayDir, rayDir),
+            shadowmarch(addToPos(din, 0.001*rayDir), rayDir),
             o.color
             );
         #else // #elif _SHADOW_OFF

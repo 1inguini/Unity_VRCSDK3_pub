@@ -72,7 +72,7 @@ Material:
     - _Mode: 0
     - _OcclusionStrength: 1
     - _Parallax: 0.02
-    - _Resolution: 0.41
+    - _Resolution: 1
     - _SHADOW: 0
     - _Shadow: 1
     - _Size: 1

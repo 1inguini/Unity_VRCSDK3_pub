@@ -135,26 +135,19 @@
             half sceneDist(distIn din) {
                 // half viewField = -sphereDist((pos-mul(unity_WorldToObject, half4(_WorldSpaceCameraPos, 1)).xyz)*10)/10;
                 // return torusDist(0.3, pos);
-                #if defined(USING_STEREO_MATRICES)
-                    half viewField = -sphereDist((mul(unity_ObjectToWorld, half4(din.pos, 1)).xyz - VR_WorldSpaceCameraPos)*10)/10;
-                #else
-                    half viewField = -sphereDist((mul(unity_ObjectToWorld, half4(din.pos, 1)).xyz - _WorldSpaceCameraPos)*10)/10;
-                #endif
-                return max(viewField,
                 #ifdef _BOX_SIERPINSKI
-                    sierpinskiDist(din)
+                    return sierpinskiDist(din);
                 #elif _BOX_MENGER
-                    mengerDist(din)
+                    return mengerDist(din);
                 #elif _BOX_MANDELBOX
-                    mandelBoxDist(din)
+                    return mandelBoxDist(din);
                 #elif _BOX_LERP
-                    lerp(
+                    return lerp(
                     mengerDist(din),
                     mandelBoxDist(din),
                     0.5*(1 - _CosTime.y)
                     );       
                 #endif
-                );
             }
 
             ENDCG
