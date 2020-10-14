@@ -56,7 +56,9 @@
     {
         half2 uv : TEXCOORD0;
         // UNITY_FOG_COORDS(1)
-        half4 pos : POSITION1;
+        // half3 pos : POSITION1;
+        half3 rayDir : RAYDIR; // not normalized
+        half3 scale : SCALE;
         half4 vertex : SV_POSITION;
     };
 
@@ -74,16 +76,39 @@
     v2f vert (appdata v)
     {
         v2f o;
-        o.vertex = UnityObjectToClipPos(v.vertex);
-        #ifdef WORLD
-            // メッシュのワールド座標を代入
-            o.pos = mul(unity_ObjectToWorld, v.vertex);
-        #elif OBJECT
-            // メッシュのローカル座標を代入
-            o.pos = v.vertex;
-        #else
-            o.pos = mul(unity_ObjectToWorld, v.vertex);
-        #endif
+        o.scale = half3(
+        length(half3(unity_ObjectToWorld[0].x, unity_ObjectToWorld[1].x, unity_ObjectToWorld[2].x)), // scale x axis
+        length(half3(unity_ObjectToWorld[0].y, unity_ObjectToWorld[1].y, unity_ObjectToWorld[2].y)), // scale y axis
+        length(half3(unity_ObjectToWorld[0].z, unity_ObjectToWorld[1].z, unity_ObjectToWorld[2].z))  // scale z axis
+        );
+        half4 posInCamera = half4(
+        UnityWorldToViewPos(_WorldSpaceCameraPos) + half3(
+        mul(
+        (half2x2)unity_CameraInvProjection, 
+        sign(v.vertex.xy)
+        ),
+        -UNITY_NEAR_CLIP_VALUE
+        ),
+        1
+        );
+        
+        o.vertex = mul(UNITY_MATRIX_P, posInCamera);
+        // o.pos = mul(UNITY_MATRIX_I_V, posInCamera).xyz; // ワールド座標
+        o.rayDir = mul((half3x3)UNITY_MATRIX_I_V, posInCamera.xyz);
+
+        // o.vertex = UnityObjectToClipPos(v.vertex);
+        
+        // o.vertex = UnityWorldToClipPos(v.vertex);
+
+        // #ifdef WORLD
+        //     // メッシュのワールド座標を代入
+        //     o.pos = mul(unity_ObjectToWorld, v.vertex);
+        // #elif OBJECT
+        //     // メッシュのローカル座標を代入
+        //     o.pos = v.vertex;
+        // #else
+        //     o.pos = mul(unity_ObjectToWorld, v.vertex);
+        // #endif
         o.uv = v.uv;
         return o;
     }
@@ -473,6 +498,7 @@
             o.totalDist += abs(marchingDist);
             din.pos = o.pos + o.totalDist*rayDir;
             din.pixSize = pixRatio*o.totalDist;
+            minDist = din.pixSize;
             // o.clarity = clarity*(maxDist-o.totalDist)/maxDist;
             o.clarity = din.clarity - sqrt(2*o.totalDist/maxDist);
             o.iter++; 
@@ -576,7 +602,8 @@
         half4 o;
         o = color;
         o.rgb = rgb2hsv(color.rgb);
-        o.r = frac(o.r + m.iter*abs(_CosTime.w)/90.0);
+        // o.r = frac(o.r + m.iter*abs(_CosTime.w)/90.0);
+        o.r = frac(o.r + m.iter*0.1);
         o.rgb = (hsv2rgb(o.rgb));
         return o;
     }
@@ -587,32 +614,37 @@
 
         distIn din;
 
-        #ifdef WORLD
-            din.pos = _WorldSpaceCameraPos;
-        #elif OBJECT
-            // half3 pos = mul(unity_WorldToObject,_WorldSpaceCameraPos);
-            din.pos = mul(unity_WorldToObject, half4(_WorldSpaceCameraPos, 1)).xyz;
-        #else
-            din.pos = _WorldSpaceCameraPos;
-        #endif
+        // #ifdef WORLD
+        //     din.pos = _WorldSpaceCameraPos;
+        // #elif OBJECT
+        //     // half3 pos = mul(unity_WorldToObject,_WorldSpaceCameraPos);
+        //     din.pos = mul(unity_WorldToObject, half4(_WorldSpaceCameraPos, 1)).xyz;
+        // #else
+        //     din.pos = _WorldSpaceCameraPos;
+        // #endif
 
         // レイの進行方向
-        half3 rayDir = normalize(i.pos.xyz - din.pos);
+        half3 rayDir = normalize(i.rayDir);
         
         #ifdef WORLD
-            din.pos += CAMERA_SPACING*rayDir;
-            din.clarity = abs(dot(rayDir, normalize(mul(FaceToWorld, half3(0,0,1)))));
+            din.pos = _WorldSpaceCameraPos + half3(0,0,1) + CAMERA_SPACING*rayDir;
+            // din.pos += CAMERA_SPACING*rayDir;
+            // din.clarity = abs(dot(rayDir, normalize(mul(FaceToWorld, half3(0,0,1)))));
         #else // #ifdef OBJECT
-            din.pos += mul((half3x3)unity_WorldToObject, CAMERA_SPACING*normalize(mul((half3x3)unity_ObjectToWorld, rayDir)));
-            din.clarity = abs(dot(rayDir, normalize(mul(unity_WorldToObject, mul(FaceToWorld, half3(0,0,1))))));
+            din.pos = _WorldSpaceCameraPos - mul(unity_ObjectToWorld, half4(0,0,-0.5,1))/i.scale + CAMERA_SPACING*rayDir;
+            // din.pos += mul((half3x3)unity_WorldToObject, CAMERA_SPACING*normalize(mul((half3x3)unity_ObjectToWorld, rayDir)));
+            // din.clarity = abs(dot(rayDir, normalize(mul(unity_WorldToObject, mul(FaceToWorld, half3(0,0,1))))));
             // blurstep(blurstep(1-1.25*distance(half2(0.5, 0.45), screenPos.xy/_ScreenParams.x))),
         #endif
 
-        din.pixSize = length(ddx(i.pos) + ddy(i.pos))/length(i.pos.xyz - din.pos);
+        din.pixSize = ddx(i.rayDir.x)/length(i.rayDir);
 
-        clip(din.clarity - 0.8);
+        // din.pixSize = length(ddx(i.pos) + ddy(i.pos))/length(i.pos.xyz - din.pos);
+
+        // clip(din.clarity - 0.8);
         // clarity = enhanceVisibility((clarity - 0.8)/(1-0.8));
-        din.clarity = min(1, 0.5 + (din.clarity - 0.8)/(1-0.8));
+        // din.clarity = min(1, 0.5 + (din.clarity - 0.8)/(1-0.8));
+        din.clarity = 1;
 
         #ifdef COLORDIST
             marchResult result = raymarch(_Color, din, rayDir);
@@ -620,22 +652,14 @@
             marchResult result = raymarch(din, rayDir);
         #endif
         
-        #if !defined(BACKGROUND)
+        #if !(defined(BACKGROUND) || defined(_DEBUG_ON))
             // if (pos.x == 0, pos.y == 0, pos.z == 0) discard;
-            if(!result.intersect) discard;
         #endif
+            if(!result.intersect) discard;
 
         din.pos = result.pos;
         din.clarity = result.clarity;
 
-        half4 projectionPos;
-        #ifdef WORLD
-            projectionPos = UnityWorldToClipPos(half4(din.pos, 1.0));
-        #elif OBJECT
-            projectionPos = UnityObjectToClipPos(half4(din.pos, 1.0));
-        #else
-            projectionPos = UnityWorldToClipPos(half4(din.pos, 1.0));
-        #endif
 
         #ifdef COLORDIST
             o.color = result.color;
@@ -650,7 +674,17 @@
             o.color = colorize(i, result, o.color);
         #endif
         
+        half4 projectionPos;
+        // #ifdef WORLD
+        //     projectionPos = UnityWorldToClipPos(half4(din.pos, 1.0));
+        // #elif OBJECT
+        //     projectionPos = UnityObjectToClipPos(half4(din.pos, 1.0));
+        // #else
+        //     projectionPos = UnityWorldToClipPos(half4(din.pos, 1.0));
+        // #endif
+        projectionPos = UnityObjectToClipPos(half4(din.pos, 1.0));
         #if !defined(NODEPTH)
+            // o.depth = projectionPos.z / projectionPos.w;
             o.depth = projectionPos.z / projectionPos.w;
         #endif
 
@@ -668,8 +702,13 @@
             o.color = lighting(din.pos, normal, 1, o.color);
         #endif
         #if defined(_DEBUG_ON)            
-            o.color.rgb = 1 - 2*din.clarity;
+            // o.color.rgb = 1 - 2*din.clarity;
             // o.color.rgb = 100*din.pixSize;
+            o.color = 1;
+            // o.color.rgb = din.pixSize;
+            // o.color.rgb = result.pos;
+            o.color.rgb = o.depth;
+            o.depth = 1;
         #endif
         return o;
     }
