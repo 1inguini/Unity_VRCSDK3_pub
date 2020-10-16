@@ -23,7 +23,7 @@
     #define EPS 10e-7
     
     struct distIn {
-        half clarity;
+        fixed clarity; // 0 <= clarity <= 1;
         half pixSize;
         half3 pos;
     };
@@ -119,9 +119,9 @@
     }
     
     inline half3 repeat(half interval, half3 pos){
-        pos -= round(pos/interval)*interval;
+        // pos -= round(pos/interval)*interval;
         // pos = (frac(pos/interval + 0.5) - 0.5)*interval;
-        return pos;
+        return pos - round(pos/interval)*interval;
     }
 
     inline half2 rotate(half2 pos, half r) {
@@ -264,20 +264,20 @@
         );
     }
 
-    // inline half3 getSceneNormal(half clarity, half3 pos){
-        //     half def = sceneDist(clarity, pos);
-        //     half3 delta = half3(EPS, 0, 0);
-        //     return normalize(half3(
-        //     sceneDist(clarity, pos + delta.xyz) - def,
-        //     sceneDist(clarity, pos + delta.zxy) - def,
-        //     sceneDist(clarity, pos + delta.yzx) - def
-        //     ));
-    // }
-
     inline distIn addToPos(distIn din, half3 posDiff) {
         din.pos += posDiff;
         return din;
     }
+
+    // inline half3 getSceneNormal(distIn din){
+        //         half def = sceneDist(din);
+        //         half2 delta = half2(EPS, 0);
+        //         return normalize(half3(
+        //         saturate(sceneDist(addToPos(din, delta.xyy))) - def,
+        //         saturate(sceneDist(addToPos(din, delta.yxy))) - def,
+        //         saturate(sceneDist(addToPos(din, delta.yyx))) - def
+        //         ));
+    // }
     inline half3 getSceneNormal(distIn din){
         // half def = sceneDist(clarity, pos);
         half2 delta = half2(EPS, -EPS); 
@@ -452,8 +452,9 @@
         marchResult o;
 
         half maxDist = 100 * (EPS + _MaxDistance * din.clarity);
-        uint maxIter = 1000 * din.clarity;
-        half minDist = EPS;
+        uint maxIter = 500 * din.clarity;
+        half minDist = din.pixSize;
+        half pixRatio = din.pixSize;
         o.pos = din.pos;
         o.totalDist = 0;
         o.iter = 0;
@@ -461,7 +462,6 @@
         #ifdef COLORDIST
             half4 cMarchingDist;
         #endif
-        half pixRatio = din.pixSize;
         half marchingDist;
         do {
             #ifdef COLORDIST
@@ -473,8 +473,9 @@
             o.totalDist += abs(marchingDist);
             din.pos = o.pos + o.totalDist*rayDir;
             din.pixSize = pixRatio*o.totalDist;
+            minDist = din.pixSize;
             // o.clarity = clarity*(maxDist-o.totalDist)/maxDist;
-            o.clarity = din.clarity - sqrt(2*o.totalDist/maxDist);
+            din.clarity = o.clarity - 2*o.totalDist/maxDist;
             o.iter++; 
         } while (
         minDist <= marchingDist &&
@@ -483,6 +484,7 @@
         o.iter < maxIter
         );
         o.pos = din.pos;
+        o.clarity = din.clarity;
         o.intersect = marchingDist < minDist;
         #ifdef COLORDIST
             o.color = half4(cMarchingDist.rgb, 1);
@@ -520,7 +522,7 @@
         [unroll(35)] for (uint i = 0; i < 35; i++)
         {
             marchingDist = abs(sceneDist(din));
-            if (marchingDist < 100*EPS) return 0;
+            if (marchingDist < EPS) return 0;
 
             totalDist += marchingDist;
             din.pos += marchingDist * rayDir;
@@ -545,9 +547,11 @@
         // lightDir = normalize(mul(unity_WorldToObject,_WorldSpaceLightPos0)).xyz;
         half lightStrength = pow(0.5*(1 + (dot(normal, lightDir))), 3);
         // half lightStrength = saturate(dot(normal, lightDir));
-
-        half3 lightProbe = ShadeSH9(fixed4(UnityObjectToWorldNormal(normal), 1));
-
+        #ifdef WORLD
+            half3 lightProbe = ShadeSH9(fixed4(normal, 1));
+        #else // #elif OBJECT
+            half3 lightProbe = ShadeSH9(fixed4(UnityObjectToWorldNormal(normal), 1));
+        #endif
         half3 lighting = lerp(lightProbe, _LightColor0, lightStrength);
         
         half3 ambient = Shade4PointLights(
@@ -577,7 +581,7 @@
         o = color;
         o.rgb = rgb2hsv(color.rgb);
         o.r = frac(o.r + m.iter*abs(_CosTime.w)/90.0);
-        o.rgb = (hsv2rgb(o.rgb));
+        o.rgb = hsv2rgb(o.rgb);
         return o;
     }
     
@@ -601,18 +605,30 @@
         
         #ifdef WORLD
             din.pos += CAMERA_SPACING*rayDir;
-            din.clarity = abs(dot(rayDir, normalize(mul(FaceToWorld, half3(0,0,1)))));
+            din.clarity = dot(rayDir, normalize(mul(FaceToWorld, half3(0,0,1))));
         #else // #ifdef OBJECT
             din.pos += mul((half3x3)unity_WorldToObject, CAMERA_SPACING*normalize(mul((half3x3)unity_ObjectToWorld, rayDir)));
-            din.clarity = abs(dot(rayDir, normalize(mul(unity_WorldToObject, mul(FaceToWorld, half3(0,0,1))))));
+            din.clarity = dot(rayDir, normalize(mul(unity_WorldToObject, mul(FaceToWorld, half3(0,0,1)))));
             // blurstep(blurstep(1-1.25*distance(half2(0.5, 0.45), screenPos.xy/_ScreenParams.x))),
         #endif
 
-        din.pixSize = length(ddx(i.pos) + ddy(i.pos))/length(i.pos.xyz - din.pos);
+        // din.pixSize = length(ddx(i.pos) + ddy(i.pos))/length(i.pos.xyz - din.pos);
+        // din.pixSize = rcp(_ScreenParams.y*UNITY_NEAR_CLIP_VALUE);
+        din.pixSize = abs(ddx(rayDir.x))/length(rayDir);
 
-        clip(din.clarity - 0.8);
+        clip(din.clarity - 0.6);
         // clarity = enhanceVisibility((clarity - 0.8)/(1-0.8));
-        din.clarity = min(1, 0.5 + (din.clarity - 0.8)/(1-0.8));
+        // din.clarity = saturate(0.5 + (din.clarity - 0.7)/(1-0.7));
+        // din.clarity = (din.clarity - 0.6)/(1-0.6);
+        // din.clarity = (din.clarity - 0.6)*2.5;
+        // // 0.6 <= din.clarity <= 1
+        din.clarity = saturate(0.1 + step(0.65, din.clarity));
+        #if defined(USING_STEREO_MATRICES)
+            #define REFRESH_RATE 300
+        #else
+            #define REFRESH_RATE 120
+        #endif
+        din.clarity *= saturate(unity_DeltaTime.w/REFRESH_RATE);
 
         #ifdef COLORDIST
             marchResult result = raymarch(_Color, din, rayDir);
@@ -620,7 +636,7 @@
             marchResult result = raymarch(din, rayDir);
         #endif
         
-        #if !defined(BACKGROUND)
+        #if !(defined(BACKGROUND) || defined(_DEBUG_ON))
             // if (pos.x == 0, pos.y == 0, pos.z == 0) discard;
             if(!result.intersect) discard;
         #endif
@@ -651,7 +667,11 @@
         #endif
         
         #if !defined(NODEPTH)
-            o.depth = projectionPos.z / projectionPos.w;
+            #if defined(BACKGROUND)
+                o.depth = result.intersect? projectionPos.z / projectionPos.w: 0;
+            #else
+                o.depth = projectionPos.z / projectionPos.w;
+            #endif
         #endif
 
         half3 normal = getSceneNormal(addToPos(din, -10*EPS*rayDir));
@@ -668,8 +688,10 @@
             o.color = lighting(din.pos, normal, 1, o.color);
         #endif
         #if defined(_DEBUG_ON)            
-            o.color.rgb = 1 - 2*din.clarity;
+            // o.color.rgb = 1 - 2*din.clarity;
+            // o.color.rgb = dot(rayDir, normalize(mul(unity_WorldToObject, mul(FaceToWorld, half3(0,0,1)))));
             // o.color.rgb = 100*din.pixSize;
+            o.color.rgb = 0.01*unity_DeltaTime.y;
         #endif
         return o;
     }

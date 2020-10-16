@@ -26,10 +26,10 @@
     SubShader
     {
 
+        LOD 1000
         Pass
         {
             Tags { "LightMode" = "ForwardBase" }
-            LOD 100
             Cull Off
 
             //アルファ値が機能するために必要

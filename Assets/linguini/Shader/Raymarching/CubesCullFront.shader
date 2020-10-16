@@ -10,9 +10,9 @@
     }
     SubShader
     {
+        LOD 1000
         Tags { "RenderType" = "Opaque" "LightMode" = "ForwardBase" }
         Cull Front
-        LOD 100
 
         Pass
         {
@@ -40,19 +40,21 @@
             }
 
             half sceneDist(distIn din){
-                half3 pos = din.pos;
-                // half atField = sphereDist((pos-_WorldSpaceCameraPos)/5)*5;
-                half time = 2*_Time.x;
-                pos.yz = rotate(pos.yz, time);
-                pos.zx = rotate(pos.zx, time);
-                pos.xy = rotate(pos.xy, time);
-                pos = repeat(10*_MaxDistance, pos);
-                pos.yz = rotate(pos.yz, _Time.y);
-                pos.zx = rotate(pos.zx, _Time.y);
-                pos.xy = rotate(pos.xy, _Time.y);
+                // half3 pos = din.pos;
+                // // half atField = sphereDist((pos-_WorldSpaceCameraPos)/5)*5;
+                // half time = 2*_Time.x;
+                // pos.yz = rotate(pos.yz, time);
+                // pos.zx = rotate(pos.zx, time);
+                // pos.xy = rotate(pos.xy, time);
+                din.pos = mul(rotationMatrix(2*_Time.x), din.pos);
+                din.pos = repeat(4, din.pos);
+                din.pos = mul(rotationMatrix(_Time.y), din.pos);
+                // pos.yz = rotate(pos.yz, _Time.y);
+                // pos.zx = rotate(pos.zx, _Time.y);
+                // pos.xy = rotate(pos.xy, _Time.y);
                 // return sphereDist(pos/_Size)*_Size;
                 // return torusDist(0.05, pos);
-                return cubeDist(pos/_Size)*_Size;
+                return cubeDist(din.pos/_Size)*_Size;
                 // return max(-atField, cubeDist(pos/_Size)*_Size);
             }
             ENDCG

@@ -19,10 +19,10 @@
     }
     SubShader
     {
+        LOD 1000
         Pass
         {
             Tags { "LightMode" = "ForwardBase" }
-            LOD 100
             Cull Front
             ZWrite On
 
@@ -117,7 +117,7 @@
                 
                 half mandelBoxDist(distIn din) {
                     // uint maxLevel = _Resolution * 100;
-                    half scale = -2.5 + 0.5*_CosTime.z;
+                    half scale = -2.5 + 0.5*_CosTime.w;
                     half absScale = abs(scale);
                     half4 offset = half4(din.pos, 1);
                     half4 posDR = half4(din.pos, 1);
@@ -152,6 +152,6 @@
 
             ENDCG
         }
-        UsePass "Standard/ShadowCaster"
+        // UsePass "Standard/ShadowCaster"
     }
 }

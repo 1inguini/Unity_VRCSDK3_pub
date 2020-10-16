@@ -19,10 +19,10 @@
     }
     SubShader
     {
+        LOD 1000
         Pass
         {
             Tags { "LightMode" = "ForwardBase" }
-            LOD 100
             Cull Front
             ZWrite On
 

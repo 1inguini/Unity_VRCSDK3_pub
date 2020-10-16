@@ -7,7 +7,7 @@ Material:
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_Name: RaytracingSphere
+  m_Name: Raytracing
   m_Shader: {fileID: 4800000, guid: 0fb70235895d2a94da6f4f7e90acdde4, type: 3}
   m_ShaderKeywords: 
   m_LightmapFlags: 4
