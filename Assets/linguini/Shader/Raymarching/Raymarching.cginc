@@ -623,11 +623,7 @@
         // din.clarity = (din.clarity - 0.6)*2.5;
         // // 0.6 <= din.clarity <= 1
         din.clarity = saturate(0.1 + step(0.65, din.clarity));
-        #if defined(USING_STEREO_MATRICES)
-            #define REFRESH_RATE 300
-        #else
-            #define REFRESH_RATE 120
-        #endif
+        #define REFRESH_RATE 90
         din.clarity *= saturate(unity_DeltaTime.w/REFRESH_RATE);
 
         #ifdef COLORDIST

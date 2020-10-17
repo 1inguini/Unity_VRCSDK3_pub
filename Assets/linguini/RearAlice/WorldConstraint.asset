@@ -1,0 +1,87 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: -340790334, guid: 67cc4cb7839cd3741b63733d5adf0442, type: 3}
+  m_Name: WorldConstraint
+  m_EditorClassIdentifier: 
+  controls:
+  - name: Cube Toggle
+    icon: {fileID: 2800000, guid: 0ff9333af28b8224893850e22c95e496, type: 3}
+    type: 102
+    parameter:
+      name: CubeToggle
+    value: 1
+    style: 0
+    subMenu: {fileID: 0}
+    subParameters: []
+    labels: []
+  - name: Mirror Toggle
+    icon: {fileID: 2800000, guid: 7f83deb51b30514499addc7b843db4e1, type: 3}
+    type: 102
+    parameter:
+      name: MirrorToggle
+    value: 1
+    style: 0
+    subMenu: {fileID: 0}
+    subParameters: []
+    labels: []
+  - name: Pickup Toggle
+    icon: {fileID: 2800000, guid: 70532155452b91149bd82125c362ca6b, type: 3}
+    type: 102
+    parameter:
+      name: PickupToggle
+    value: 1
+    style: 0
+    subMenu: {fileID: 0}
+    subParameters: []
+    labels: []
+  - name: Show Constraints
+    icon: {fileID: 2800000, guid: ab6dae33d7a158a44a4fff12d8567a91, type: 3}
+    type: 102
+    parameter:
+      name: ShowConstraints
+    value: 1
+    style: 0
+    subMenu: {fileID: 0}
+    subParameters: []
+    labels: []
+  - name: Resolution
+    icon: {fileID: 0}
+    type: 203
+    parameter:
+      name: 
+    value: 1
+    style: 0
+    subMenu: {fileID: 0}
+    subParameters:
+    - name: Resolution
+    labels: []
+  - name: Cube Size
+    icon: {fileID: 0}
+    type: 203
+    parameter:
+      name: 
+    value: 1
+    style: 0
+    subMenu: {fileID: 0}
+    subParameters:
+    - name: CubeSize
+    labels: []
+  - name: CubeType
+    icon: {fileID: 0}
+    type: 103
+    parameter:
+      name: 
+    value: 1
+    style: 0
+    subMenu: {fileID: 11400000, guid: 61ec4e5b09b7649418c93b63f6ea22e4, type: 2}
+    subParameters: []
+    labels: []

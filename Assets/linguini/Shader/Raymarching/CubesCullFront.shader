@@ -47,7 +47,7 @@
                 // pos.zx = rotate(pos.zx, time);
                 // pos.xy = rotate(pos.xy, time);
                 din.pos = mul(rotationMatrix(2*_Time.x), din.pos);
-                din.pos = repeat(4, din.pos);
+                din.pos = repeat(3, din.pos);
                 din.pos = mul(rotationMatrix(_Time.y), din.pos);
                 // pos.yz = rotate(pos.yz, _Time.y);
                 // pos.zx = rotate(pos.zx, _Time.y);
