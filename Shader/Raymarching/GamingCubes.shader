@@ -97,16 +97,10 @@
             }
             
             half sceneDist(distIn din){
-                half3 pos = din.pos;
-                half time = 2*_Time.x;
-                pos.yz = rotate(pos.yz, time);
-                pos.zx = rotate(pos.zx, time);
-                pos.xy = rotate(pos.xy, time);
-                pos = repeat(2, pos);
-                pos.yz = rotate(pos.yz, _Time.y);
-                pos.zx = rotate(pos.zx, _Time.y);
-                pos.xy = rotate(pos.xy, _Time.y);
-                return cubeDist(pos/_Size)*_Size;
+                din.pos = mul(rotationMatrix(2*_Time.x), din.pos);
+                din.pos = repeat(0.25, din.pos);
+                din.pos = mul(rotationMatrix(_Time.y), din.pos);
+                return cubeDist(din.pos/_Size)*_Size;
             }
             
             ENDCG

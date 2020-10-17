@@ -4,7 +4,6 @@
     {
         _Color ("Color", Color) = (1,1,1)
         
-        _BackGround ("BackGround", Color) = (0,0,0)
         _MaxDistance ("MaxDistance", Range(0,1)) = 0.1
         _Resolution ("Resolution", Range(0,1)) = 0.3
 
@@ -42,7 +41,7 @@
             #include "UnityCG.cginc"
             #include "Lighting.cginc"
 
-            #define CAMERA_SPACING 0.1
+            #define CAMERA_SPACING 0.05
             #include "Raymarching.cginc"
             
             inline half4 colorize(v2f i, marchResult m, half4 color) {

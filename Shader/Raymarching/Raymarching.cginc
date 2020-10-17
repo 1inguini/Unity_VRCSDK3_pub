@@ -18,7 +18,9 @@
     half _MaxDistance;
     half _Resolution;
 
+    // // max size of float
     //#define INF 3.402823466e+38
+    // max size of half
     #define INF 60000
     #define EPS 10e-7
     
@@ -656,11 +658,7 @@
         #endif
         din.clarity = result.clarity;
 
-        #ifdef BACKGROUND
-            o.color = result.intersect? colorize(i, result, o.color): _BackGround;
-        #else
-            o.color = colorize(i, result, o.color);
-        #endif
+        o.color = colorize(i, result, o.color);
         
         #if !defined(NODEPTH)
             #if defined(BACKGROUND)
@@ -682,6 +680,9 @@
             );
         #else // #elif _SHADOW_OFF
             o.color = lighting(din.pos, normal, 1, o.color);
+        #endif
+        #ifdef BACKGROUND
+            o.color = result.intersect? o.color: _BackGround;
         #endif
         #if defined(_DEBUG_ON)            
             // o.color.rgb = 1 - 2*din.clarity;

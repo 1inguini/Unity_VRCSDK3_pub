@@ -31,7 +31,7 @@
             #include "UnityCG.cginc"
             #include "Lighting.cginc"
 
-            #define CAMERA_SPACING 0.1
+            #define CAMERA_SPACING 1
 
             #include "Raymarching.cginc"
             
@@ -47,7 +47,7 @@
                 // pos.zx = rotate(pos.zx, time);
                 // pos.xy = rotate(pos.xy, time);
                 din.pos = mul(rotationMatrix(2*_Time.x), din.pos);
-                din.pos = repeat(3, din.pos);
+                din.pos = repeat(2, din.pos);
                 din.pos = mul(rotationMatrix(_Time.y), din.pos);
                 // pos.yz = rotate(pos.yz, _Time.y);
                 // pos.zx = rotate(pos.zx, _Time.y);
