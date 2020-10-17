@@ -538,22 +538,22 @@
         half3 lightDir;
         #ifdef WORLD
             lightDir = _WorldSpaceLightPos0.xyz;
+            lightDir -= _WorldSpaceLightPos0.w? 0: pos;
         #elif OBJECT
             //ローカル座標で計算しているので、ディレクショナルライトの角度もローカル座標にする
             lightDir = mul(unity_WorldToObject, _WorldSpaceLightPos0).xyz;
+            lightDir -= _WorldSpaceLightPos0.w? 0: mul(unity_WorldToObject, half4(pos, 1)).xyz;
         #else
             lightDir = half3(1,-1,0);
         #endif
         lightDir = normalize(lightDir);
-
-        // lightDir = normalize(mul(unity_WorldToObject,_WorldSpaceLightPos0)).xyz;
-        half lightStrength = pow(0.5*(1 + (dot(normal, lightDir))), 3);
-        // half lightStrength = saturate(dot(normal, lightDir));
         #ifdef WORLD
             half3 lightProbe = ShadeSH9(fixed4(normal, 1));
         #else // #elif OBJECT
             half3 lightProbe = ShadeSH9(fixed4(UnityObjectToWorldNormal(normal), 1));
         #endif
+        // half lightStrength = pow(0.5*(1 + (dot(normal, lightDir))), 3); // ディレクショナルライトがないと黒くなる
+        half lightStrength = saturate(dot(normal, lightDir)); // ディレクショナルライトがないとき0になるべき
         half3 lighting = lerp(lightProbe, _LightColor0, lightStrength);
         
         half3 ambient = Shade4PointLights(
@@ -566,10 +566,14 @@
         unity_LightColor[3].rgb,
         unity_4LightAtten0, 
         pos, 
-        normal);
+        normal
+        );
 
         // return half4(lerp(col.rgb*0.01, col.rgb, shadow) * lighting + (ambient? ambient: 0.1), col.a);
-        return half4(lerp(col.rgb*(ambient? ambient: 0.1), col.rgb, shadow * lighting), col.a);
+        return half4(
+        lerp(col.rgb*(ambient? ambient: 0.1), col.rgb, shadow * lighting),
+        col.a
+        );
     }
 
     bool nearlyEq(half x, half y) {

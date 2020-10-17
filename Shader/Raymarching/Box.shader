@@ -41,7 +41,7 @@
             #include "UnityCG.cginc"
             #include "Lighting.cginc"
 
-            #define CAMERA_SPACING 0.05
+            #define CAMERA_SPACING 0.075
             #include "Raymarching.cginc"
             
             inline half4 colorize(v2f i, marchResult m, half4 color) {
