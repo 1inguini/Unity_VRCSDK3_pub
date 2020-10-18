@@ -308,10 +308,10 @@
         half2 delta = half2(EPS, -EPS); 
         half2 plusminus = half2(INF, -INF)*0.5;
         half3 normal = half3(
-        plusminus.xyy*saturate(sceneDist(addToPos(din, delta.xyy))) +
-        plusminus.yyx*saturate(sceneDist(addToPos(din, delta.yyx))) +
-        plusminus.yxy*saturate(sceneDist(addToPos(din, delta.yxy))) +
-        plusminus.xxx*saturate(sceneDist(addToPos(din, delta.xxx)))
+        plusminus.xyy*(sceneDist(addToPos(din, delta.xyy))) +
+        plusminus.yyx*(sceneDist(addToPos(din, delta.yyx))) +
+        plusminus.yxy*(sceneDist(addToPos(din, delta.yxy))) +
+        plusminus.xxx*(sceneDist(addToPos(din, delta.xxx)))
         );
         half normalLength = length(normal);
         return normalLength? normal/normalLength: float3(1,0,0);
@@ -695,7 +695,7 @@
             #endif
         #endif
 
-        half3 normal = getSceneNormal(addToPos(din, -10*EPS*rayDir));
+        half3 normal = getSceneNormal(addToPos(din, -EPS*rayDir));
 
         #ifdef _SHADOW_ON
             #ifdef OBJECT

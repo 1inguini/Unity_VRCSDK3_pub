@@ -53,8 +53,8 @@
                 // half t = frac(_Time.y*0.5)*2;
                 //half x = t < 1? 1-exp(-m*t): exp(-m*(t-1));
                 // din.pos = mul(rotationMatrix(UNITY_HALF_PI*x), din.pos);
-                half2 rot1 = half2(UNITY_HALF_PI*(easing(m, frac(_Time.y))), 0);
-                din.pos = mul(rotationMatrix(-rot1[i%2], rot1[(i+1)%2], 0), din.pos);
+                half2 rot = half2(UNITY_HALF_PI*(easing(m, frac(_Time.y))), 0);
+                din.pos = mul(rotationMatrix(-rot[i%2], ((i+1)%4? -1: 1)*rot[(i+1)%2], 0), din.pos);
                 
                 half beat = _Size*(1+0.5*exp(-m*0.25*(1 + cos(UNITY_TWO_PI*_Time.w))));
                 return cubeDist(din.pos/beat)*beat;
