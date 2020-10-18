@@ -27,6 +27,8 @@
             // #pragma multi_compile OBJECT
             #pragma multi_compile _SHADOW_OFF
             #pragma multi_compile BACKGROUND
+            #pragma multi_compile NODEPTH
+
             
             #include "UnityCG.cginc"
             #include "Lighting.cginc"
@@ -40,27 +42,20 @@
             }
 
             half sceneDist(distIn din){
-                // half3 pos = din.pos;
-                // // half atField = sphereDist((pos-_WorldSpaceCameraPos)/5)*5;
-                // half time = 2*_Time.x;
-                // pos.yz = rotate(pos.yz, time);
-                // pos.zx = rotate(pos.zx, time);
-                // pos.xy = rotate(pos.xy, time);
-                // din.pos.x -= _Time.y;
-                // din.pos = mul(rotationMatrix(-2*_Time.x), din.pos);
-                half interval = 2;
-                din.pos = repeat(interval, din.pos);
+                half interval = 3*_Size;
                 half m = 10;
-                half t = frac(_Time.y*0.5)*2;
-                half x = t < 1? 1-exp(-m*t): exp(-m*(t-1));
-                din.pos = mul(rotationMatrix(UNITY_HALF_PI*x), din.pos);
-                // pos.yz = rotate(pos.yz, _Time.y);
-                // pos.zx = rotate(pos.zx, _Time.y);
-                // pos.xy = rotate(pos.xy, _Time.y);
-                // return sphereDist(pos/_Size)*_Size;
-                // return torusDist(0.05, pos);
-                return cubeDist(din.pos/_Size)*_Size;
-                // return max(-atField, cubeDist(pos/_Size)*_Size);
+                uint i = ceil(_Time.y);
+                // din.pos.x -= _Time.y;
+                din.pos = mul(rotationMatrix(-2*_Time.x), din.pos);
+                din.pos = repeat(interval, din.pos);
+                // half t = frac(_Time.y*0.5)*2;
+                //half x = t < 1? 1-exp(-m*t): exp(-m*(t-1));
+                // din.pos = mul(rotationMatrix(UNITY_HALF_PI*x), din.pos);
+                half2 rot1 = half2(UNITY_HALF_PI*(easing(m, frac(_Time.y))), 0);
+                din.pos = mul(rotationMatrix(-rot1[i%2], rot1[(i+1)%2], 0), din.pos);
+                
+                half beat = _Size*(1+0.5*exp(-m*0.25*(1 + cos(UNITY_TWO_PI*_Time.w))));
+                return cubeDist(din.pos/beat)*beat;
             }
             ENDCG
         }

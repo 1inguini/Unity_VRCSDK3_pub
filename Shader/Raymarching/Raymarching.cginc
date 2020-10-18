@@ -110,6 +110,11 @@
         return 1 - x*x;
     }
 
+    // 0 <= x <= 1
+    inline half easing(half m, half x) {
+        return 1-exp(-m*x);
+    }
+
     inline half3 fold(half3 normal, half3 pos) {
         return pos - 2*min(0, dot(pos, normal))*normal;
     }
@@ -471,7 +476,7 @@
     {
         marchResult o;
 
-        half maxDist = 100 * (EPS + _MaxDistance * din.clarity);
+        half maxDist = 500 * (EPS + _MaxDistance * din.clarity);
         uint maxIter = 500 * din.clarity;
         half minDist = din.pixSize;
         half pixRatio = din.pixSize;

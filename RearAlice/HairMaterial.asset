@@ -13,6 +13,16 @@ MonoBehaviour:
   m_Name: HairMaterial
   m_EditorClassIdentifier: 
   controls:
+  - name: Raymarching Hair
+    icon: {fileID: 0}
+    type: 102
+    parameter:
+      name: HairMaterial
+    value: 0
+    style: 0
+    subMenu: {fileID: 0}
+    subParameters: []
+    labels: []
   - name: Gaming Hair
     icon: {fileID: 2800000, guid: 9a20b3a6641e1af4e95e058f361790cb, type: 3}
     type: 102
@@ -23,7 +33,7 @@ MonoBehaviour:
     subMenu: {fileID: 0}
     subParameters: []
     labels: []
-  - name: Raymarching Hair
+  - name: Default Hair
     icon: {fileID: 0}
     type: 102
     parameter:
