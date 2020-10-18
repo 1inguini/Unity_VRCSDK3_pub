@@ -119,11 +119,29 @@
         half r2 = square(pos);
         return (r2 < R2? R2/r2: 1)*pos;
     }
-    
+
     inline half3 repeat(half interval, half3 pos){
         // pos -= round(pos/interval)*interval;
         // pos = (frac(pos/interval + 0.5) - 0.5)*interval;
         return pos - round(pos/interval)*interval;
+    }
+    
+    inline half roundRem(half x) {
+        return x - round(x);
+    }
+    inline half3 roundRem(half3 v) {
+        return half3(roundRem(v.x), roundRem(v.y), roundRem(v.z));
+    }
+
+    inline half3 random3 (half3 pos) { 
+        return frac(sin(dot(pos.xyz, float3(12.9898, 78.233, 56.787))) * 43758.5453);
+    }
+
+    // WIP
+    inline half3 randRepeat(half interval, half3 pos){
+        pos -= random3(round(pos/(interval+1)));
+        pos = roundRem(pos/interval)*interval;
+        return pos;
     }
 
     inline half2 rotate(half2 pos, half r) {
@@ -283,7 +301,7 @@
     inline half3 getSceneNormal(distIn din){
         // half def = sceneDist(clarity, pos);
         half2 delta = half2(EPS, -EPS); 
-        half2 plusminus = half2(1, -1);
+        half2 plusminus = half2(INF, -INF)*0.5;
         half3 normal = half3(
         plusminus.xyy*saturate(sceneDist(addToPos(din, delta.xyy))) +
         plusminus.yyx*saturate(sceneDist(addToPos(din, delta.yyx))) +

@@ -98,7 +98,7 @@
             
             half sceneDist(distIn din){
                 din.pos = mul(rotationMatrix(2*_Time.x), din.pos);
-                din.pos = repeat(0.25, din.pos);
+                din.pos = repeat(_Size*10, din.pos);
                 din.pos = mul(rotationMatrix(_Time.y), din.pos);
                 return cubeDist(din.pos/_Size)*_Size;
             }

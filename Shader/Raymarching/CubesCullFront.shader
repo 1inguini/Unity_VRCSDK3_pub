@@ -46,9 +46,14 @@
                 // pos.yz = rotate(pos.yz, time);
                 // pos.zx = rotate(pos.zx, time);
                 // pos.xy = rotate(pos.xy, time);
-                din.pos = mul(rotationMatrix(2*_Time.x), din.pos);
-                din.pos = repeat(2, din.pos);
-                din.pos = mul(rotationMatrix(_Time.y), din.pos);
+                // din.pos.x -= _Time.y;
+                // din.pos = mul(rotationMatrix(-2*_Time.x), din.pos);
+                half interval = 2;
+                din.pos = repeat(interval, din.pos);
+                half m = 10;
+                half t = frac(_Time.y*0.5)*2;
+                half x = t < 1? 1-exp(-m*t): exp(-m*(t-1));
+                din.pos = mul(rotationMatrix(UNITY_HALF_PI*x), din.pos);
                 // pos.yz = rotate(pos.yz, _Time.y);
                 // pos.zx = rotate(pos.zx, _Time.y);
                 // pos.xy = rotate(pos.xy, _Time.y);
