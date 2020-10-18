@@ -547,7 +547,7 @@
         [unroll(35)] for (uint i = 0; i < 35; i++)
         {
             marchingDist = abs(sceneDist(din));
-            if (marchingDist < EPS) return 0;
+            if (marchingDist < din.pixSize*totalDist) return 0;
 
             totalDist += marchingDist;
             din.pos += marchingDist * rayDir;
@@ -556,27 +556,27 @@
         return result;
     }
 
-    half4 lighting(half3 pos, half3 normal, fixed shadow, fixed4 col) {
+    half4 lighting(half3 wpos, half3 wnormal, fixed shadow, fixed4 col) {
 
         half3 lightDir;
-        #ifdef WORLD
-            lightDir = _WorldSpaceLightPos0.xyz;
-            lightDir -= _WorldSpaceLightPos0.w? 0: pos;
-        #elif OBJECT
-            //ローカル座標で計算しているので、ディレクショナルライトの角度もローカル座標にする
-            lightDir = mul(unity_WorldToObject, _WorldSpaceLightPos0).xyz;
-            lightDir -= _WorldSpaceLightPos0.w? 0: mul(unity_WorldToObject, half4(pos, 1)).xyz;
-        #else
-            lightDir = half3(1,-1,0);
-        #endif
+        // #ifdef WORLD
+        lightDir = _WorldSpaceLightPos0.xyz;
+        lightDir -= _WorldSpaceLightPos0.w? wpos: 0;
+        // #elif OBJECT
+        //     //ローカル座標で計算しているので、ディレクショナルライトの角度もローカル座標にする
+        //     lightDir = mul(unity_WorldToObject, _WorldSpaceLightPos0).xyz;
+        //     lightDir -= _WorldSpaceLightPos0.w? 0: mul(unity_WorldToObject, half4(pos, 1)).xyz;
+        // #else
+        //     lightDir = half3(1,-1,0);
+        // #endif
         lightDir = normalize(lightDir);
-        #ifdef WORLD
-            half3 lightProbe = ShadeSH9(fixed4(normal, 1));
-        #else // #elif OBJECT
-            half3 lightProbe = ShadeSH9(fixed4(UnityObjectToWorldNormal(normal), 1));
-        #endif
+        // #ifdef WORLD
+        half3 lightProbe = ShadeSH9(fixed4(wnormal, 1));
+        // #else // #elif OBJECT
+        //     half3 lightProbe = ShadeSH9(fixed4(UnityObjectToWorldNormal(normal), 1));
+        // #endif
         // half lightStrength = pow(0.5*(1 + (dot(normal, lightDir))), 3); // ディレクショナルライトがないと黒くなる
-        half lightStrength = saturate(dot(normal, lightDir)); // ディレクショナルライトがないとき0になるべき
+        half lightStrength = saturate(dot(wnormal, lightDir)); // ディレクショナルライトがないとき0になるべき
         half3 lighting = lerp(lightProbe, _LightColor0, lightStrength);
         
         half3 ambient = Shade4PointLights(
@@ -588,8 +588,8 @@
         unity_LightColor[2].rgb, 
         unity_LightColor[3].rgb,
         unity_4LightAtten0, 
-        pos, 
-        normal
+        wpos, 
+        wnormal
         );
 
         // return half4(lerp(col.rgb*0.01, col.rgb, shadow) * lighting + (ambient? ambient: 0.1), col.a);
@@ -653,7 +653,7 @@
         // // 0.6 <= din.clarity <= 1
         din.clarity = saturate(0.1 + step(0.65, din.clarity));
         #define REFRESH_RATE 90
-        din.clarity *= saturate(unity_DeltaTime.w/REFRESH_RATE);
+        din.clarity *= saturate(unity_DeltaTime.y/REFRESH_RATE);
 
         #ifdef COLORDIST
             marchResult result = raymarch(_Color, din, rayDir);
@@ -698,11 +698,20 @@
         half3 normal = getSceneNormal(addToPos(din, -10*EPS*rayDir));
 
         #ifdef _SHADOW_ON
-            rayDir = mul(unity_WorldToObject, _WorldSpaceLightPos0).xyz;
+            #ifdef OBJECT
+                rayDir = mul(unity_WorldToObject, _WorldSpaceLightPos0).xyz;
+                half shadow = shadowmarch(addToPos(din, 0.001*rayDir), rayDir);
+                normal = UnityObjectToWorldNormal(normal);
+                din.pos = mul(unity_ObjectToWorld, half4(din.pos, 1)).xyz;
+            #else // #elif WORLD
+                rayDir = _WorldSpaceLightPos0;
+                half shadow = shadowmarch(addToPos(din, 0.001*rayDir), rayDir);
+            #endif
+
             o.color = lighting(
             din.pos, 
             normal,
-            shadowmarch(addToPos(din, 0.001*rayDir), rayDir),
+            shadow,
             o.color
             );
         #else // #elif _SHADOW_OFF

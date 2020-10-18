@@ -97,12 +97,12 @@
             }
             
             half sceneDist(distIn din){
-                half atField = -sphereDist((din.pos - mul(unity_ObjectToWorld, half4(0,0,0,1)).xyz)*0.2)*5;
+                half atField = -sphereDist((din.pos - mul(unity_ObjectToWorld, half4(0,0,0,1)).xyz)*0.1)*10;
                 half interval = 3*_Size;
                 half m = 10;
                 uint i = ceil(_Time.y);
-                // din.pos.x -= _Time.y;
-                din.pos = mul(rotationMatrix(-2*_Time.x), din.pos);
+                din.pos.z -= ceil(_Time.y) + easing(m, frac(_Time.y));
+                // din.pos = mul(rotationMatrix(-2*_Time.x), din.pos);
                 din.pos = repeat(interval, din.pos);
                 half2 rot1 = half2(UNITY_HALF_PI*(easing(m, frac(_Time.y))), 0);
                 din.pos = mul(rotationMatrix(-rot1[i%2], rot1[(i+1)%2], 0), din.pos);

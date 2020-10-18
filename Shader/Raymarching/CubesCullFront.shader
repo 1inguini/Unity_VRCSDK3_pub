@@ -46,7 +46,9 @@
                 half m = 10;
                 uint i = ceil(_Time.y);
                 // din.pos.x -= _Time.y;
-                din.pos = mul(rotationMatrix(-2*_Time.x), din.pos);
+                // din.pos = mul(rotationMatrix(-2*_Time.x), din.pos);
+                din.pos.z -= ceil(_Time.y) + easing(m, frac(_Time.y));
+                // din.pos.z -= _Time.y;
                 din.pos = repeat(interval, din.pos);
                 // half t = frac(_Time.y*0.5)*2;
                 //half x = t < 1? 1-exp(-m*t): exp(-m*(t-1));
