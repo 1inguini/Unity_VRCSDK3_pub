@@ -34,14 +34,14 @@ Material:
     - _FreqG: 1
     - _FreqR: 1
     - _Green: 1
-    - _MaxDistance: 0.05
+    - _MaxDistance: 0.025
     - _NdotL: 1
-    - _RGBIntensity: 1
+    - _RGBIntensity: 0.5
     - _Red: 1
     - _SHADOW: 0
-    - _Scale: 1
+    - _Scale: 3
     - _Size: 0.1
-    - _TexIntensity: 0.5
+    - _TexIntensity: 1
     m_Colors:
     - _BackGround: {r: 0, g: 0, b: 0, a: 1}
     - _Color: {r: 1, g: 1, b: 1, a: 1}

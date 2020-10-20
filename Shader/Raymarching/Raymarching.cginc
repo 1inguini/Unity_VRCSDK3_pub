@@ -107,7 +107,9 @@
         half totalDist;
         half totalDistRatio;
         bool intersect;
-        half nearestDist;
+        #ifdef GLOW
+            half nearestDist;
+        #endif
         half iter;
         half clarity;
         #ifdef COLORDIST
@@ -129,7 +131,9 @@
         half pixRatio = din.pixSize;
         o.pos = din.pos;
         o.totalDist = 0;
-        o.nearestDist = maxDist;
+        #ifdef GLOW
+            o.nearestDist = maxDist;
+        #endif
         o.intersect = false;
         o.iter = 0;
         o.clarity = din.clarity;
@@ -154,7 +158,9 @@
             minDist = din.pixSize*o.totalDist;
             // o.clarity = clarity*(maxDist-o.totalDist)/maxDist;
             din.clarity = o.clarity - square(o.totalDist/maxDist);
-            o.nearestDist = min(o.nearestDist, marchingDist);
+            #ifdef GLOW
+                o.nearestDist = min(o.nearestDist, marchingDist);
+            #endif
             o.iter++; 
             o.intersect = marchingDist < minDist;
         }

@@ -802,6 +802,11 @@ PrefabInstance:
       propertyPath: m_Name
       value: RearAlice3_Avatars3.0_linguini
       objectReference: {fileID: 0}
+    - target: {fileID: 7656145193333315171, guid: 9041fae22e0329d4ab908e2f6b6db802,
+        type: 3}
+      propertyPath: BypassListenerEffects
+      value: 1
+      objectReference: {fileID: 0}
     m_RemovedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 9041fae22e0329d4ab908e2f6b6db802, type: 3}
 --- !u!1 &2078977397
@@ -896,22 +901,3 @@ Transform:
   m_Father: {fileID: 0}
   m_RootOrder: 4
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!1 &2123851840 stripped
-GameObject:
-  m_CorrespondingSourceObject: {fileID: 5335772287434845762, guid: 9041fae22e0329d4ab908e2f6b6db802,
-    type: 3}
-  m_PrefabInstance: {fileID: 1770465059}
-  m_PrefabAsset: {fileID: 0}
---- !u!114 &2123851841
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2123851840}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 229740497, guid: 4ecd63eff847044b68db9453ce219299, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  contentType: 0
