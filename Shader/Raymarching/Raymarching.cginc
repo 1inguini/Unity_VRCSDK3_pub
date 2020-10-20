@@ -47,7 +47,7 @@
     {
         half2 uv : TEXCOORD0;
         // UNITY_FOG_COORDS(1)
-        half4 pos : POSITION1;
+        half3 pos : POSITION1;
         half4 vertex : SV_POSITION;
     };
 
@@ -68,42 +68,21 @@
         o.vertex = UnityObjectToClipPos(v.vertex);
         #ifdef WORLD
             // メッシュのワールド座標を代入
-            o.pos = mul(unity_ObjectToWorld, v.vertex);
+            o.pos = mul(unity_ObjectToWorld, v.vertex).xyz;
         #elif OBJECT
             // メッシュのローカル座標を代入
-            o.pos = v.vertex;
+            o.pos = v.vertex.xyz;
         #else
-            o.pos = mul(unity_ObjectToWorld, v.vertex);
+            o.pos = mul(unity_ObjectToWorld, v.vertex).xyz;
         #endif
         o.uv = v.uv;
         return o;
     }
 
-    // inline half3 getSceneNormal(distIn din){
-        //         half def = sceneDist(din);
-        //         half2 delta = half2(EPS, 0);
-        //         return normalize(half3(
-        //         saturate(sceneDist(addToPos(din, delta.xyy))) - def,
-        //         saturate(sceneDist(addToPos(din, delta.yxy))) - def,
-        //         saturate(sceneDist(addToPos(din, delta.yyx))) - def
-        //         ));
-    // }
-    inline half3 getSceneNormal(distIn din){
-        // half def = sceneDist(clarity, pos);
-        half2 delta = half2(EPS, -EPS); 
-        half2 plusminus = half2(INF, -INF)*0.5;
-        half3 normal = half3(
-        plusminus.xyy*(sceneDist(addToPos(din, delta.xyy))) +
-        plusminus.yyx*(sceneDist(addToPos(din, delta.yyx))) +
-        plusminus.yxy*(sceneDist(addToPos(din, delta.yxy))) +
-        plusminus.xxx*(sceneDist(addToPos(din, delta.xxx)))
-        );
-        half normalLength = length(normal);
-        return normalLength? normal/normalLength: float3(1,0,0);
-    }
-
     struct marchResult {
-        half3 pos;
+        distIn din;
+        // half3 pos;
+        // half clarity;
         half totalDist;
         half totalDistRatio;
         bool intersect;
@@ -111,7 +90,6 @@
             half nearestDist;
         #endif
         half iter;
-        half clarity;
         #ifdef COLORDIST
             half4 color;
         #endif
@@ -128,15 +106,13 @@
         half maxDist = 500 * (EPS + _MaxDistance * din.clarity);
         uint maxIter = 500 * din.clarity;
         half minDist = din.pixSize;
-        half pixRatio = din.pixSize;
-        o.pos = din.pos;
+        o.din = din;
         o.totalDist = 0;
         #ifdef GLOW
             o.nearestDist = maxDist;
         #endif
         o.intersect = false;
         o.iter = 0;
-        o.clarity = din.clarity;
         #ifdef COLORDIST
             half4 cMarchingDist;
         #endif
@@ -148,24 +124,22 @@
         o.iter < maxIter
         ) {
             #ifdef COLORDIST
-                cMarchingDist = coloredSceneDist(color, din);
+                cMarchingDist = coloredSceneDist(color, o.din);
                 marchingDist = cMarchingDist.w;
             #else
-                marchingDist = sceneDist(din);
+                marchingDist = sceneDist(o.din);
             #endif
             o.totalDist += abs(marchingDist);
-            din.pos = o.pos + o.totalDist*rayDir;
+            o.din.pos = din.pos + o.totalDist*rayDir;
             minDist = din.pixSize*o.totalDist;
             // o.clarity = clarity*(maxDist-o.totalDist)/maxDist;
-            din.clarity = o.clarity - square(o.totalDist/maxDist);
+            o.din.clarity = din.clarity - square(o.totalDist/maxDist);
             #ifdef GLOW
                 o.nearestDist = min(o.nearestDist, marchingDist);
             #endif
             o.iter++; 
             o.intersect = marchingDist < minDist;
         }
-        o.pos = din.pos;
-        o.clarity = din.clarity;
         o.totalDistRatio = o.totalDist / maxDist;
         #ifdef COLORDIST
             o.color = half4(cMarchingDist.rgb, 1);
@@ -196,8 +170,9 @@
 
         half3 lightDir;
         // #ifdef WORLD
-        lightDir = _WorldSpaceLightPos0.xyz;
-        lightDir -= _WorldSpaceLightPos0.w? wpos: 0;
+        // lightDir = _WorldSpaceLightPos0.xyz;
+        // lightDir -= _WorldSpaceLightPos0.w? wpos: 0;
+        lightDir = UnityWorldSpaceLightDir(wpos);
         // #elif OBJECT
         //     //ローカル座標で計算しているので、ディレクショナルライトの角度もローカル座標にする
         //     lightDir = mul(unity_WorldToObject, _WorldSpaceLightPos0).xyz;
@@ -235,10 +210,6 @@
         );
     }
 
-    bool nearlyEq(half x, half y) {
-        return x - EPS <= y && y <= x + EPS;
-    }
-
     half4 colorize(v2f i, marchResult m, half4 color);
     
     half4 distColor(half slip, marchResult m, half4 color) {
@@ -250,6 +221,39 @@
         return o;
     }
     
+    // inline half3 getSceneNormal(distIn din){
+        //         half def = sceneDist(din);
+        //         half2 delta = half2(EPS, 0);
+        //         return normalize(half3(
+        //         saturate(sceneDist(addToPos(din, delta.xyy))) - def,
+        //         saturate(sceneDist(addToPos(din, delta.yxy))) - def,
+        //         saturate(sceneDist(addToPos(din, delta.yyx))) - def
+        //         ));
+    // }
+    // inline half3 getSceneNormal(distIn din){
+        //     half def = sceneDist(din);
+        //     half2 delta = half2(EPS, 0);
+        //     half3 normal = half3(
+        //     sceneDist(addToPos(din, delta.xyy)) - sceneDist(addToPos(din, -delta.xyy)),
+        //     sceneDist(addToPos(din, delta.yxy)) - sceneDist(addToPos(din, -delta.yxy)),
+        //     sceneDist(addToPos(din, delta.yyx)) - sceneDist(addToPos(din, -delta.yyx))
+        //     );
+        //     half normalLength = length(normal);
+        //     return normalLength? normal/normalLength: float3(1,0,0);
+    // }
+    inline half3 getSceneNormal(distIn din){
+        half2 delta = half2(EPS, -EPS); 
+        half2 plusminus = half2(INF, -INF)*0.5;
+        half3 normal = half3(
+        plusminus.xyy*(sceneDist(addToPos(din, delta.xyy))) +
+        plusminus.yyx*(sceneDist(addToPos(din, delta.yyx))) +
+        plusminus.yxy*(sceneDist(addToPos(din, delta.yxy))) +
+        plusminus.xxx*(sceneDist(addToPos(din, delta.xxx)))
+        );
+        half normalLength = length(normal);
+        return normalLength? normal/normalLength: float3(1,0,0);
+    }
+
     fragout frag (v2f i)
     {
         fragout o;
@@ -266,13 +270,21 @@
         #endif
 
         // レイの進行方向
-        half3 rayDir = normalize(i.pos.xyz - din.pos);
+        half3 rayDir = normalize(i.pos - din.pos);
+        
+        #ifdef FRONT_SIDE_DRAWED
+            din.pos = i.pos;
+        #endif
         
         #ifdef WORLD
-            din.pos += CAMERA_SPACING*rayDir;
+            #ifndef FRONT_SIDE_DRAWED
+                din.pos += CAMERA_SPACING*rayDir;
+            #endif
             din.clarity = dot(rayDir, normalize(mul(FaceToWorld, half3(0,0,1))));
         #else // #ifdef OBJECT
-            din.pos += mul((half3x3)unity_WorldToObject, CAMERA_SPACING*normalize(mul((half3x3)unity_ObjectToWorld, rayDir)));
+            #ifndef FRONT_SIDE_DRAWED
+                din.pos += mul((half3x3)unity_WorldToObject, CAMERA_SPACING*normalize(mul((half3x3)unity_ObjectToWorld, rayDir)));
+            #endif
             din.clarity = dot(rayDir, normalize(mul(unity_WorldToObject, mul(FaceToWorld, half3(0,0,1)))));
             // blurstep(blurstep(1-1.25*distance(half2(0.5, 0.45), screenPos.xy/_ScreenParams.x))),
         #endif
@@ -304,11 +316,11 @@
 
         half4 projectionPos;
         #ifdef WORLD
-            projectionPos = UnityWorldToClipPos(half4(result.pos, 1.0));
+            projectionPos = UnityWorldToClipPos(half4(result.din.pos, 1.0));
         #elif OBJECT
-            projectionPos = UnityObjectToClipPos(half4(result.pos, 1.0));
+            projectionPos = UnityObjectToClipPos(half4(result.din.pos, 1.0));
         #else
-            projectionPos = UnityWorldToClipPos(half4(result.pos, 1.0));
+            projectionPos = UnityWorldToClipPos(half4(result.din.pos, 1.0));
         #endif
 
         #ifdef COLORDIST
@@ -323,7 +335,7 @@
             #if defined(BACKGROUND) && defined(PARTIAL_DEPTH)
                 // o.depth = result.intersect? projectionPos.z / projectionPos.w: 0;
                 half4 p = UnityWorldToClipPos(i.pos);
-                o.depth = result.totalDist < length(i.pos.xyz - din.pos) && result.intersect?
+                o.depth = result.totalDist < length(i.pos - din.pos) && result.intersect?
                 projectionPos.z/projectionPos.w:
                 p.z/p.w;
             #elif defined(BACKGROUND)
@@ -333,31 +345,30 @@
             #endif
         #endif
 
-        din.pos = result.pos;
-        din.clarity = result.clarity;
-
-        half3 normal = getSceneNormal(addToPos(din, -EPS*rayDir));
-
         #if !defined(_SHADE_OFF)
+            half3 normal = getSceneNormal(addToPos(result.din, -EPS*rayDir));
+
+            #ifdef OBJECT
+                half3 wnormal = UnityObjectToWorldNormal(normal);
+                half3 wpos = mul(unity_ObjectToWorld, half4(result.din.pos, 1)).xyz;
+                rayDir = normalize(ObjSpaceLightDir(half4(result.din.pos, 1)));
+            #else // #elif WORLD
+                half3 wnormal = normal;
+                half3 wpos = result.din.pos;
+                rayDir = normalize(UnityWorldSpaceLightDir(wpos));
+            #endif
+
             #ifdef _SHADOW_ON
-                #ifdef OBJECT
-                    rayDir = mul(unity_WorldToObject, _WorldSpaceLightPos0).xyz;
-                    half shadow = shadowmarch(addToPos(din, 0.001*rayDir), rayDir);
-                    normal = UnityObjectToWorldNormal(normal);
-                    din.pos = mul(unity_ObjectToWorld, half4(din.pos, 1)).xyz;
-                #else // #elif WORLD
-                    rayDir = _WorldSpaceLightPos0;
-                    half shadow = shadowmarch(addToPos(din, 0.001*rayDir), rayDir);
-                #endif
+                half shadow = shadowmarch(addToPos(result.din, 0.001*rayDir), rayDir);
 
                 o.color = !result.intersect? o.color: lighting(
-                din.pos, 
-                normal,
+                wpos, 
+                wnormal,
                 shadow,
                 o.color
                 );
             #else // #elif _SHADOW_OFF
-                o.color = !result.intersect? o.color: lighting(din.pos, normal, 1, o.color);
+                o.color = !result.intersect? o.color: lighting(wpos, wnormal, 1, o.color);
             #endif
         #endif
 
@@ -372,7 +383,8 @@
             // o.color.rgb = 1 - 2*din.clarity;
             // o.color.rgb = dot(rayDir, normalize(mul(unity_WorldToObject, mul(FaceToWorld, half3(0,0,1)))));
             // o.color.rgb = 100*din.pixSize;
-            o.color.rgb = 0.01*unity_DeltaTime.y;
+            // o.color.rgb = 0.5*(1+normal);
+            o.color.rgb = normal;
         #endif
         return o;
     }

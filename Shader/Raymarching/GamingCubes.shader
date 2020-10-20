@@ -48,6 +48,7 @@
             #pragma multi_compile _SHADOW_OFF
             #pragma multi_compile _SHADE_OFF
             #pragma multi_compile GLOW
+            #pragma multi_compile FRONT_SIDE_DRAWED
 
             #pragma shader_feature _ _DEBUG_ON
 

@@ -18,6 +18,10 @@
         return half4(roundRem(v.x), roundRem(v.y), roundRem(v.z), roundRem(v.w));
     }
 
+    bool nearlyEq(half x, half y) {
+        return x - EPS <= y && y <= x + EPS;
+    }
+
     inline half square(half x) {
         return x*x;
     }

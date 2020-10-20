@@ -11,6 +11,9 @@
         
         [KeywordEnum(SIERPINSKI, MENGER, MANDELBOX, LERP, CUBE)]
         _BOX ("BoxType", Float) = 0
+
+        [KeywordEnum(OFF, ON)]
+        _DEBUG ("DEBUG", Float) = 0
     }
     SubShader
     {
@@ -35,6 +38,7 @@
             #pragma multi_compile PARTIAL_DEPTH
 
             #pragma shader_feature _BOX_SIERPINSKI _BOX_MENGER _BOX_MANDELBOX _BOX_LERP _BOX_CUBE
+            #pragma shader_feature _ _DEBUG_ON
             
             #include "UnityCG.cginc"
             #include "Lighting.cginc"
@@ -54,7 +58,7 @@
             #endif
 
             half sceneDist(distIn din){
-                half m = 15;
+                half m = 16;
                 half interval = 3*_Size;
                 half tick = 0.5*_Time.y;
                 uint i = ceil(tick);
