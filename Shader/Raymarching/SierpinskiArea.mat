@@ -7,9 +7,9 @@ Material:
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_Name: CubesCullFront
-  m_Shader: {fileID: 4800000, guid: 469b7c978270de64c8440cf4a98b7add, type: 3}
-  m_ShaderKeywords: 
+  m_Name: SierpinskiArea
+  m_Shader: {fileID: 4800000, guid: 7b434da3bc106e34988cc56a83e57f7a, type: 3}
+  m_ShaderKeywords: _BOX_SIERPINSKI
   m_LightmapFlags: 4
   m_EnableInstancingVariants: 0
   m_DoubleSidedGI: 0
@@ -57,6 +57,7 @@ Material:
         m_Offset: {x: 0, y: 0}
     m_Floats:
     - _Anim: 0
+    - _BOX: 0
     - _BumpScale: 1
     - _Cutoff: 0.5
     - _DetailNormalMapScale: 1
@@ -71,6 +72,7 @@ Material:
     - _OcclusionStrength: 1
     - _Parallax: 0.02
     - _Radius: 0.01
+    - _Resolution: 1
     - _Rotate: 1
     - _Size: 1
     - _SmoothnessTextureChannel: 0
@@ -79,6 +81,6 @@ Material:
     - _UVSec: 0
     - _ZWrite: 1
     m_Colors:
-    - _BackGround: {r: 0, g: 0, b: 0, a: 1}
-    - _Color: {r: 1, g: 1, b: 1, a: 1}
+    - _BackGround: {r: 1, g: 1, b: 1, a: 1}
+    - _Color: {r: 1, g: 0, b: 0, a: 1}
     - _EmissionColor: {r: 0, g: 0, b: 0, a: 1}

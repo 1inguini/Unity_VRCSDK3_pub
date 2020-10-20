@@ -46,6 +46,8 @@
             #pragma multi_compile BACKGROUND
             #pragma multi_compile NODEPTH
             #pragma multi_compile _SHADOW_OFF
+            #pragma multi_compile _SHADE_OFF
+            #pragma multi_compile GLOW
 
             #pragma shader_feature _ _DEBUG_ON
 
@@ -91,23 +93,37 @@
                 clip(col.a - _Cutoff);
                 return o;
             }
+            // fixed4 gaming (v2f i)
+            // {   
+                //     half xy = (i.uv.x + i.uv.y) * _Scale;
+                //     fixed4 col = tex2D(_MainTex, i.uv);
+                //     fixed3 gaming_col = hsv2rgb(fixed3(_Time.y + xy, _TexIntensity, rgb2hsv(col).z));
+                //     return fixed4(gaming_col, 1);
+            // }
 
             inline half4 colorize (v2f i, marchResult m, half4 color) {
                 return gaming(i);
             }
+            // inline half4 colorize (v2f i, marchResult m, half4 color) {
+            //     half xy = (i.uv.x + i.uv.y) * _Scale;
+            //     fixed4 col = tex2D(_MainTex, i.uv);
+            //     fixed3 gaming_col = hsv2rgb(fixed3(m.totalDistRatio + xy, _TexIntensity, rgb2hsv(col).z*_RGBIntensity));
+            //     return fixed4(gaming_col, 1);
+            // }
             
             half sceneDist(distIn din){
                 half atField = -sphereDist((din.pos - mul(unity_ObjectToWorld, half4(0,0,0,1)).xyz)*0.1)*10;
-                half interval = 4*_Size;
-                half m = 10;
+                half interval = 10*_Size;
+                half m = 3;
                 uint i = ceil(_Time.y);
-                din.pos.z -= ceil(_Time.y) + easing(m, frac(_Time.y));
+                din.pos.y -= ceil(_Time.y) + easing(m, frac(_Time.y));
                 // din.pos = mul(rotationMatrix(-2*_Time.x), din.pos);
                 din.pos = repeat(interval, din.pos);
                 half2 rot = half2(UNITY_HALF_PI*(easing(m, frac(_Time.y))), 0);
-                din.pos = mul(rotationMatrix(-rot[i%2], ((i+1)%4? -1: 1)*rot[(i+1)%2], 0), din.pos);
-                
-                half beat = _Size*(1+0.5*exp(-m*0.25*(1 + cos(UNITY_TWO_PI*_Time.w))));
+                din.pos.y = abs(din.pos.y);
+                din.pos.y -= 0.25*interval;
+                din.pos = mul(rotationMatrix((i%4? -1: 1)*rot[i%2], 0, ((i+1)%4? -1: 1)*rot[(i+1)%2]), din.pos);
+                half beat = _Size*(1+0.5*exp(-m*0.25*(1 + cos(UNITY_TWO_PI*_Time.z))));
                 return max(atField, cubeDist(din.pos/beat)*beat);
             }
             

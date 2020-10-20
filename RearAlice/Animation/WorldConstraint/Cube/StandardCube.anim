@@ -25,6 +25,41 @@ AnimationClip:
     path: WorldConstraint/Cube/Mesh
     classID: 23
     script: {fileID: 0}
+  - curve:
+    - time: 0
+      value: {fileID: 10303, guid: 0000000000000000f000000000000000, type: 0}
+    attribute: m_Materials.Array.data[0].m_FileID
+    path: WorldConstraint/Cube/Mesh
+    classID: 23
+    script: {fileID: 0}
+  - curve:
+    - time: 0
+      value: {fileID: 10303, guid: 0000000000000000f000000000000000, type: 0}
+    attribute: m_Materials.Array.data[0].m_PathID
+    path: WorldConstraint/Cube/Mesh
+    classID: 23
+    script: {fileID: 0}
+  - curve:
+    - time: 0
+      value: {fileID: 2100000, guid: 9ec1ed453c3e9454f859c3f5b07a0a6f, type: 2}
+    attribute: m_Materials.Array.data[0]
+    path: WorldConstraint/RayMarching
+    classID: 23
+    script: {fileID: 0}
+  - curve:
+    - time: 0
+      value: {fileID: 2100000, guid: 9ec1ed453c3e9454f859c3f5b07a0a6f, type: 2}
+    attribute: m_Materials.Array.data[0].m_FileID
+    path: WorldConstraint/RayMarching
+    classID: 23
+    script: {fileID: 0}
+  - curve:
+    - time: 0
+      value: {fileID: 2100000, guid: 9ec1ed453c3e9454f859c3f5b07a0a6f, type: 2}
+    attribute: m_Materials.Array.data[0].m_PathID
+    path: WorldConstraint/RayMarching
+    classID: 23
+    script: {fileID: 0}
   m_SampleRate: 60
   m_WrapMode: 0
   m_Bounds:
@@ -39,8 +74,48 @@ AnimationClip:
       typeID: 23
       customType: 21
       isPPtrCurve: 1
+    - serializedVersion: 2
+      path: 3520641775
+      attribute: 0
+      script: {fileID: 0}
+      typeID: 23
+      customType: 21
+      isPPtrCurve: 1
+    - serializedVersion: 2
+      path: 3520641775
+      attribute: 0
+      script: {fileID: 0}
+      typeID: 23
+      customType: 21
+      isPPtrCurve: 1
+    - serializedVersion: 2
+      path: 916107207
+      attribute: 0
+      script: {fileID: 0}
+      typeID: 23
+      customType: 21
+      isPPtrCurve: 1
+    - serializedVersion: 2
+      path: 916107207
+      attribute: 0
+      script: {fileID: 0}
+      typeID: 23
+      customType: 21
+      isPPtrCurve: 1
+    - serializedVersion: 2
+      path: 916107207
+      attribute: 0
+      script: {fileID: 0}
+      typeID: 23
+      customType: 21
+      isPPtrCurve: 1
     pptrCurveMapping:
     - {fileID: 10303, guid: 0000000000000000f000000000000000, type: 0}
+    - {fileID: 10303, guid: 0000000000000000f000000000000000, type: 0}
+    - {fileID: 10303, guid: 0000000000000000f000000000000000, type: 0}
+    - {fileID: 2100000, guid: 9ec1ed453c3e9454f859c3f5b07a0a6f, type: 2}
+    - {fileID: 2100000, guid: 9ec1ed453c3e9454f859c3f5b07a0a6f, type: 2}
+    - {fileID: 2100000, guid: 9ec1ed453c3e9454f859c3f5b07a0a6f, type: 2}
   m_AnimationClipSettings:
     serializedVersion: 2
     m_AdditiveReferencePoseClip: {fileID: 0}

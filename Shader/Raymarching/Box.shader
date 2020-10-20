@@ -45,7 +45,7 @@
             #include "Raymarching.cginc"
             
             inline half4 colorize(v2f i, marchResult m, half4 color) {
-                return distColor(m, color);
+                return distColor(0, m, color);
             }
 
             half sceneDist(distIn din) {

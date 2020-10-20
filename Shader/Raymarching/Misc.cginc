@@ -4,6 +4,19 @@
     inline half min3(half x, half y, half z){
         return min(x, min(y, z));
     }
+    
+    inline half roundRem(half x) {
+        return x - round(x);
+    }
+    inline half2 roundRem(half2 v) {
+        return half2(roundRem(v.x), roundRem(v.y));
+    }
+    inline half3 roundRem(half3 v) {
+        return half3(roundRem(v.x), roundRem(v.y), roundRem(v.z));
+    }
+    inline half4 roundRem(half4 v) {
+        return half4(roundRem(v.x), roundRem(v.y), roundRem(v.z), roundRem(v.w));
+    }
 
     inline half square(half x) {
         return x*x;

@@ -6,7 +6,7 @@ AnimationClip:
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_Name: SierpinskiWithSofShadow
+  m_Name: SierpinskiWithSoftShadow
   serializedVersion: 6
   m_Legacy: 0
   m_Compressed: 0
@@ -39,6 +39,27 @@ AnimationClip:
     path: WorldConstraint/Cube/Mesh
     classID: 23
     script: {fileID: 0}
+  - curve:
+    - time: 0
+      value: {fileID: 2100000, guid: c3cb31e849186ad4aa33eec5b0cf0b3c, type: 2}
+    attribute: m_Materials.Array.data[0]
+    path: WorldConstraint/RayMarching
+    classID: 23
+    script: {fileID: 0}
+  - curve:
+    - time: 0
+      value: {fileID: 2100000, guid: c3cb31e849186ad4aa33eec5b0cf0b3c, type: 2}
+    attribute: m_Materials.Array.data[0].m_FileID
+    path: WorldConstraint/RayMarching
+    classID: 23
+    script: {fileID: 0}
+  - curve:
+    - time: 0
+      value: {fileID: 2100000, guid: c3cb31e849186ad4aa33eec5b0cf0b3c, type: 2}
+    attribute: m_Materials.Array.data[0].m_PathID
+    path: WorldConstraint/RayMarching
+    classID: 23
+    script: {fileID: 0}
   m_SampleRate: 60
   m_WrapMode: 0
   m_Bounds:
@@ -67,10 +88,34 @@ AnimationClip:
       typeID: 23
       customType: 21
       isPPtrCurve: 1
+    - serializedVersion: 2
+      path: 916107207
+      attribute: 0
+      script: {fileID: 0}
+      typeID: 23
+      customType: 21
+      isPPtrCurve: 1
+    - serializedVersion: 2
+      path: 916107207
+      attribute: 0
+      script: {fileID: 0}
+      typeID: 23
+      customType: 21
+      isPPtrCurve: 1
+    - serializedVersion: 2
+      path: 916107207
+      attribute: 0
+      script: {fileID: 0}
+      typeID: 23
+      customType: 21
+      isPPtrCurve: 1
     pptrCurveMapping:
     - {fileID: 2100000, guid: 6e71669b05342424f985a867e2a7d30f, type: 2}
     - {fileID: 2100000, guid: 6e71669b05342424f985a867e2a7d30f, type: 2}
     - {fileID: 2100000, guid: 6e71669b05342424f985a867e2a7d30f, type: 2}
+    - {fileID: 2100000, guid: c3cb31e849186ad4aa33eec5b0cf0b3c, type: 2}
+    - {fileID: 2100000, guid: c3cb31e849186ad4aa33eec5b0cf0b3c, type: 2}
+    - {fileID: 2100000, guid: c3cb31e849186ad4aa33eec5b0cf0b3c, type: 2}
   m_AnimationClipSettings:
     serializedVersion: 2
     m_AdditiveReferencePoseClip: {fileID: 0}

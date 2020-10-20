@@ -20,7 +20,7 @@
         din.pos += posDiff;
         return din;
     }
-    
+
     inline half3 fold(half3 normal, half3 pos) {
         return pos - 2*min(0, dot(pos, normal))*normal;
     }
@@ -35,13 +35,6 @@
         // pos -= round(pos/interval)*interval;
         // pos = (frac(pos/interval + 0.5) - 0.5)*interval;
         return pos - round(pos/interval)*interval;
-    }
-    
-    inline half roundRem(half x) {
-        return x - round(x);
-    }
-    inline half3 roundRem(half3 v) {
-        return half3(roundRem(v.x), roundRem(v.y), roundRem(v.z));
     }
 
     // WIP

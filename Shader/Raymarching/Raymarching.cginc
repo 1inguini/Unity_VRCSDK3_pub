@@ -103,10 +103,11 @@
     }
 
     struct marchResult {
+        half3 pos;
         half totalDist;
         half totalDistRatio;
         bool intersect;
-        half3 pos;
+        half nearestDist;
         half iter;
         half clarity;
         #ifdef COLORDIST
@@ -128,13 +129,20 @@
         half pixRatio = din.pixSize;
         o.pos = din.pos;
         o.totalDist = 0;
+        o.nearestDist = maxDist;
+        o.intersect = false;
         o.iter = 0;
         o.clarity = din.clarity;
         #ifdef COLORDIST
             half4 cMarchingDist;
         #endif
         half marchingDist;
-        do {
+        while (
+        (!o.intersect) &&
+        o.totalDist < maxDist &&
+        marchingDist < 0.5*maxDist &&
+        o.iter < maxIter
+        ) {
             #ifdef COLORDIST
                 cMarchingDist = coloredSceneDist(color, din);
                 marchingDist = cMarchingDist.w;
@@ -143,20 +151,15 @@
             #endif
             o.totalDist += abs(marchingDist);
             din.pos = o.pos + o.totalDist*rayDir;
-            din.pixSize = pixRatio*o.totalDist;
-            minDist = din.pixSize;
+            minDist = din.pixSize*o.totalDist;
             // o.clarity = clarity*(maxDist-o.totalDist)/maxDist;
-            din.clarity = o.clarity - 2*o.totalDist/maxDist;
+            din.clarity = o.clarity - square(o.totalDist/maxDist);
+            o.nearestDist = min(o.nearestDist, marchingDist);
             o.iter++; 
-        } while (
-        minDist <= marchingDist &&
-        o.totalDist < maxDist &&
-        marchingDist < 0.5*maxDist &&
-        o.iter < maxIter
-        );
+            o.intersect = marchingDist < minDist;
+        }
         o.pos = din.pos;
         o.clarity = din.clarity;
-        o.intersect = marchingDist < minDist;
         o.totalDistRatio = o.totalDist / maxDist;
         #ifdef COLORDIST
             o.color = half4(cMarchingDist.rgb, 1);
@@ -232,11 +235,11 @@
 
     half4 colorize(v2f i, marchResult m, half4 color);
     
-    half4 distColor(marchResult m, half4 color) {
+    half4 distColor(half slip, marchResult m, half4 color) {
         half4 o;
         o = color;
         o.rgb = rgb2hsv(color.rgb);
-        o.r = frac(o.r + m.iter*abs(_CosTime.w)/90.0);
+        o.r = frac(o.r + slip + m.iter/90.0);
         o.rgb = hsv2rgb(o.rgb);
         return o;
     }
@@ -280,7 +283,7 @@
         // // 0.6 <= din.clarity <= 1
         din.clarity = saturate(0.1 + step(0.65, din.clarity));
         #define REFRESH_RATE 90
-        din.clarity *= saturate(unity_DeltaTime.y/REFRESH_RATE);
+        din.clarity *= saturate(unity_DeltaTime.w/REFRESH_RATE);
 
         #ifdef COLORDIST
             marchResult result = raymarch(_Color, din, rayDir);
@@ -293,16 +296,13 @@
             if(!result.intersect) discard;
         #endif
 
-        din.pos = result.pos;
-        din.clarity = result.clarity;
-
         half4 projectionPos;
         #ifdef WORLD
-            projectionPos = UnityWorldToClipPos(half4(din.pos, 1.0));
+            projectionPos = UnityWorldToClipPos(half4(result.pos, 1.0));
         #elif OBJECT
-            projectionPos = UnityObjectToClipPos(half4(din.pos, 1.0));
+            projectionPos = UnityObjectToClipPos(half4(result.pos, 1.0));
         #else
-            projectionPos = UnityWorldToClipPos(half4(din.pos, 1.0));
+            projectionPos = UnityWorldToClipPos(half4(result.pos, 1.0));
         #endif
 
         #ifdef COLORDIST
@@ -310,42 +310,57 @@
         #else
             o.color = _Color;
         #endif
-        din.clarity = result.clarity;
 
         o.color = colorize(i, result, o.color);
         
         #if !defined(NODEPTH)
-            #if defined(BACKGROUND)
+            #if defined(BACKGROUND) && defined(PARTIAL_DEPTH)
+                // o.depth = result.intersect? projectionPos.z / projectionPos.w: 0;
+                half4 p = UnityWorldToClipPos(i.pos);
+                o.depth = result.totalDist < length(i.pos.xyz - din.pos) && result.intersect?
+                projectionPos.z/projectionPos.w:
+                p.z/p.w;
+            #elif defined(BACKGROUND)
                 o.depth = result.intersect? projectionPos.z / projectionPos.w: 0;
             #else
                 o.depth = projectionPos.z / projectionPos.w;
             #endif
         #endif
 
+        din.pos = result.pos;
+        din.clarity = result.clarity;
+
         half3 normal = getSceneNormal(addToPos(din, -EPS*rayDir));
 
-        #ifdef _SHADOW_ON
-            #ifdef OBJECT
-                rayDir = mul(unity_WorldToObject, _WorldSpaceLightPos0).xyz;
-                half shadow = shadowmarch(addToPos(din, 0.001*rayDir), rayDir);
-                normal = UnityObjectToWorldNormal(normal);
-                din.pos = mul(unity_ObjectToWorld, half4(din.pos, 1)).xyz;
-            #else // #elif WORLD
-                rayDir = _WorldSpaceLightPos0;
-                half shadow = shadowmarch(addToPos(din, 0.001*rayDir), rayDir);
-            #endif
+        #if !defined(_SHADE_OFF)
+            #ifdef _SHADOW_ON
+                #ifdef OBJECT
+                    rayDir = mul(unity_WorldToObject, _WorldSpaceLightPos0).xyz;
+                    half shadow = shadowmarch(addToPos(din, 0.001*rayDir), rayDir);
+                    normal = UnityObjectToWorldNormal(normal);
+                    din.pos = mul(unity_ObjectToWorld, half4(din.pos, 1)).xyz;
+                #else // #elif WORLD
+                    rayDir = _WorldSpaceLightPos0;
+                    half shadow = shadowmarch(addToPos(din, 0.001*rayDir), rayDir);
+                #endif
 
-            o.color = lighting(
-            din.pos, 
-            normal,
-            shadow,
-            o.color
-            );
-        #else // #elif _SHADOW_OFF
-            o.color = lighting(din.pos, normal, 1, o.color);
+                o.color = !result.intersect? o.color: lighting(
+                din.pos, 
+                normal,
+                shadow,
+                o.color
+                );
+            #else // #elif _SHADOW_OFF
+                o.color = !result.intersect? o.color: lighting(din.pos, normal, 1, o.color);
+            #endif
         #endif
+
         #ifdef BACKGROUND
-            o.color = lerp(o.color, _BackGround, result.totalDistRatio);
+            #ifdef GLOW
+                o.color = result.intersect? o.color: _BackGround*result.totalDistRatio+pow(result.nearestDist+1, -K)*o.color;
+            #else
+                o.color = lerp(result.intersect? o.color: _BackGround, _BackGround, result.totalDistRatio);
+            #endif
         #endif
         #if defined(_DEBUG_ON)            
             // o.color.rgb = 1 - 2*din.clarity;

@@ -787,11 +787,16 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
-    - target: {fileID: 2319277173110071385, guid: 9041fae22e0329d4ab908e2f6b6db802,
+    - target: {fileID: 2268320549329768939, guid: 9041fae22e0329d4ab908e2f6b6db802,
         type: 3}
-      propertyPath: m_Materials.Array.data[0]
-      value: 
-      objectReference: {fileID: 2100000, guid: faad4bfa32f6cf040ab9b5dffc7df525, type: 2}
+      propertyPath: animationHashSet.Array.data[86].hash
+      value: 2142848459
+      objectReference: {fileID: 0}
+    - target: {fileID: 2268320549329768939, guid: 9041fae22e0329d4ab908e2f6b6db802,
+        type: 3}
+      propertyPath: animationHashSet.Array.data[86].name
+      value: SierpinskiWithSoftShadow
+      objectReference: {fileID: 0}
     - target: {fileID: 5335772287434845762, guid: 9041fae22e0329d4ab908e2f6b6db802,
         type: 3}
       propertyPath: m_Name
