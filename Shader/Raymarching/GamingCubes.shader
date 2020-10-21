@@ -112,16 +112,24 @@
             //     return fixed4(gaming_col, 1);
             // }
             
-            half sceneDist(distIn din){
-                half atField = -sphereDist((din.pos - mul(unity_ObjectToWorld, half4(0,0,0,1)).xyz)*0.1)*10;
+            half sceneDist(distIn din) {
+                half3 objPos = mul(unity_ObjectToWorld, half4(0,0,0,1)).xyz;
+                half atField = -sphereDist((din.pos - objPos)*0.1)*10;
                 half interval = 10*_Size;
                 half m = 3;
                 uint i = ceil(_Time.y);
+                
                 din.pos.y -= ceil(_Time.y) + easing(m, frac(_Time.y));
+
+                din.pos.zx -= objPos.zx;
+                din.pos.zx = rotate(din.pos.zx, _Time.x);
+                din.pos.zx = rotate(din.pos.zx, ceil(din.pos.y/interval*2));
+                din.pos.zx += objPos.zx;
+
                 // din.pos.zx -= (ceil(2*din.pos.y/interval)%2)*interval*0.5;
                 // din.pos = mul(rotationMatrix(-2*_Time.x), din.pos);
                 din.pos = repeat(interval, din.pos);
-                half2 rot = half2(UNITY_HALF_PI*(easing(m, frac(_Time.y))), 0);
+                half2 rot = half2(UNITY_HALF_PI*0.25*(easing(m, frac(_Time.y))), 0);
                 din.pos.y = abs(din.pos.y);
                 din.pos.y -= 0.25*interval;
                 din.pos = mul(rotationMatrix((i%4? -1: 1)*rot[i%2], 0, ((i+1)%4? -1: 1)*rot[(i+1)%2]), din.pos);
