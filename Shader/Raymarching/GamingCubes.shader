@@ -118,6 +118,7 @@
                 half m = 3;
                 uint i = ceil(_Time.y);
                 din.pos.y -= ceil(_Time.y) + easing(m, frac(_Time.y));
+                // din.pos.zx -= (ceil(2*din.pos.y/interval)%2)*interval*0.5;
                 // din.pos = mul(rotationMatrix(-2*_Time.x), din.pos);
                 din.pos = repeat(interval, din.pos);
                 half2 rot = half2(UNITY_HALF_PI*(easing(m, frac(_Time.y))), 0);

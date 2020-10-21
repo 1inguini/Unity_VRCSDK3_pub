@@ -102,10 +102,13 @@
     #endif
     {
         marchResult o;
-
-        half maxDist = 500 * (EPS + _MaxDistance * din.clarity);
+        #ifdef FRONT_SIDE_DRAWED
+            half maxDist = 500 * (EPS + _MaxDistance);
+        #else
+            half maxDist = 500 * (EPS + _MaxDistance * din.clarity);
+        #endif
         uint maxIter = 500 * din.clarity;
-        half minDist = din.pixSize;
+        // half minDist = din.pixSize;
         o.din = din;
         o.totalDist = 0;
         #ifdef GLOW
@@ -131,14 +134,14 @@
             #endif
             o.totalDist += abs(marchingDist);
             o.din.pos = din.pos + o.totalDist*rayDir;
-            minDist = din.pixSize*o.totalDist;
+            o.din.pixSize = din.pixSize*o.totalDist;
             // o.clarity = clarity*(maxDist-o.totalDist)/maxDist;
             o.din.clarity = din.clarity - square(o.totalDist/maxDist);
             #ifdef GLOW
                 o.nearestDist = min(o.nearestDist, marchingDist);
             #endif
             o.iter++; 
-            o.intersect = marchingDist < minDist;
+            o.intersect = marchingDist < o.din.pixSize;
         }
         o.totalDistRatio = o.totalDist / maxDist;
         #ifdef COLORDIST
