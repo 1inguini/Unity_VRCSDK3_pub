@@ -6,6 +6,7 @@
         fixed clarity; // 0 <= clarity <= 1;
         half pixSize;
         half3 pos;
+        half3 objPos;
     };
 
     distIn mkDistIn(half clarity, half pixSize, half3 pos) {

@@ -54,9 +54,7 @@
                 #ifdef _BOX_SIERPINSKI
                     return sierpinskiDist(din);
                 #elif _BOX_MENGER
-                    half beat = (1+0.5*exp(-5*0.25*(1 + cos(UNITY_TWO_PI*_Time.z))));
-                    din.pos /= beat;
-                    return mengerDist(din)*beat;
+                    return mengerDist(din);
                 #elif _BOX_MANDELBOX
                     return mandelBoxDist(din);
                 #elif _BOX_LERP

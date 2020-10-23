@@ -103,9 +103,9 @@
     {
         marchResult o;
         #ifdef FRONT_SIDE_DRAWED
-            half maxDist = 500 * (EPS + _MaxDistance);
+            half maxDist = lerp(5, 50, _MaxDistance * din.clarity);
         #else
-            half maxDist = 500 * (EPS + _MaxDistance * din.clarity);
+            half maxDist = lerp(CAMERA_SPACING, 500, _MaxDistance * din.clarity);
         #endif
         uint maxIter = 500 * din.clarity;
         // half minDist = din.pixSize;
@@ -305,6 +305,8 @@
         din.clarity = saturate(0.1 + step(0.65, din.clarity));
         #define REFRESH_RATE 90
         din.clarity *= saturate(unity_DeltaTime.w/REFRESH_RATE);
+
+        din.objPos = mul(unity_ObjectToWorld, half4(0,0,0,1)).xyz;
 
         #ifdef COLORDIST
             marchResult result = raymarch(_Color, din, rayDir);
