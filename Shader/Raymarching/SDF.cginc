@@ -35,12 +35,13 @@
     inline half3 repeat(half interval, half3 pos){
         // pos -= round(pos/interval)*interval;
         // pos = (frac(pos/interval + 0.5) - 0.5)*interval;
-        return pos - round(pos/interval)*interval;
+        // return pos - round(pos/interval)*interval;
+        return roundRem(pos/interval)*interval;
     }
 
     // WIP
     inline half3 randRepeat(half interval, half3 pos){
-        pos -= random3(round(pos/(interval+1)));
+        pos -= random(round(pos/(interval+1)));
         pos = roundRem(pos/interval)*interval;
         return pos;
     }

@@ -9378,7 +9378,7 @@ MonoBehaviour:
     isDefault: 1
   - isEnabled: 0
     type: 4
-    animatorController: {fileID: 9100000, guid: deafb09a9f1602441b85640d225391e2,
+    animatorController: {fileID: 9100000, guid: 6ff9e2a6f3a65d14797514f6d2cf323e,
       type: 2}
     mask: {fileID: 0}
     isDefault: 0

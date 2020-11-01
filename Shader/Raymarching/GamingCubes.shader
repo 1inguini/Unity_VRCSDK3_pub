@@ -30,7 +30,7 @@
         Pass
         {
             Tags { "LightMode" = "ForwardBase" }
-            Cull Back
+            Cull off
 
             //アルファ値が機能するために必要
             // Blend SrcAlpha OneMinusSrcAlpha
@@ -114,7 +114,7 @@
             
             half sceneDist(distIn din) {
                 half atField = -sphereDist((din.pos - din.objPos)*0.1)*10;
-                half interval = 1;
+                half interval = 10*_Size;
                 half m = 3;
                 uint i = ceil(_Time.y);
                 half fracSec = frac(_Time.y);
@@ -129,7 +129,7 @@
                 // din.pos.zx -= (ceil(2*din.pos.y/interval)%2)*interval*0.5;
                 // din.pos = mul(rotationMatrix(-2*_Time.x), din.pos);
                 din.pos = repeat(interval, din.pos);
-                half2 rot = half2(UNITY_HALF_PI*0.25*(easing(m, fracSec)), 0);
+                half2 rot = half2(UNITY_HALF_PI*(easing(m, fracSec)), 0);
                 din.pos.y = abs(din.pos.y);
                 din.pos.y -= 0.25*interval;
                 din.pos = mul(rotationMatrix((i%4? -1: 1)*rot[i%2], 0, ((i+1)%4? -1: 1)*rot[(i+1)%2]), din.pos);

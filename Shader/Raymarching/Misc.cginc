@@ -43,8 +43,14 @@
         return 1-exp(-m*x);
     }
     
-    inline half3 random3 (half3 pos) { 
-        return frac(sin(dot(pos.xyz, float3(12.9898, 78.233, 56.787))) * 43758.5453);
+    inline half random (half x) { 
+        return frac(sin(x * 12.9898) * 43758.5453);
+    }
+    inline half2 random (half2 uv) { 
+        return frac(sin(dot(uv, float2(12.9898, 78.233))) * 43758.5453);
+    }
+    inline half3 random (half3 pos) { 
+        return frac(sin(dot(pos, float3(12.9898, 78.233, 56.787))) * 43758.5453);
     }
 
     inline half2 rotate(half2 pos, half r) {

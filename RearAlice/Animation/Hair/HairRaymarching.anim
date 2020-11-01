@@ -27,9 +27,37 @@ AnimationClip:
     script: {fileID: 0}
   - curve:
     - time: 0
-      value: {fileID: 2100000, guid: faad4bfa32f6cf040ab9b5dffc7df525, type: 2}
+      value: {fileID: 2100000, guid: f2b170d7556fb374b8672918d8e09461, type: 2}
     attribute: m_Materials.Array.data[0]
     path: HairShadow
+    classID: 137
+    script: {fileID: 0}
+  - curve:
+    - time: 0
+      value: {fileID: 2100000, guid: f2b170d7556fb374b8672918d8e09461, type: 2}
+    attribute: m_Materials.Array.data[0].m_FileID
+    path: HairShadow
+    classID: 137
+    script: {fileID: 0}
+  - curve:
+    - time: 0
+      value: {fileID: 2100000, guid: f2b170d7556fb374b8672918d8e09461, type: 2}
+    attribute: m_Materials.Array.data[0].m_PathID
+    path: HairShadow
+    classID: 137
+    script: {fileID: 0}
+  - curve:
+    - time: 0
+      value: {fileID: 2100000, guid: faad4bfa32f6cf040ab9b5dffc7df525, type: 2}
+    attribute: m_Materials.Array.data[0].m_FileID
+    path: Hair
+    classID: 137
+    script: {fileID: 0}
+  - curve:
+    - time: 0
+      value: {fileID: 2100000, guid: faad4bfa32f6cf040ab9b5dffc7df525, type: 2}
+    attribute: m_Materials.Array.data[0].m_PathID
+    path: Hair
     classID: 137
     script: {fileID: 0}
   m_SampleRate: 60
@@ -53,7 +81,39 @@ AnimationClip:
       typeID: 137
       customType: 21
       isPPtrCurve: 1
+    - serializedVersion: 2
+      path: 1387587311
+      attribute: 0
+      script: {fileID: 0}
+      typeID: 137
+      customType: 21
+      isPPtrCurve: 1
+    - serializedVersion: 2
+      path: 1387587311
+      attribute: 0
+      script: {fileID: 0}
+      typeID: 137
+      customType: 21
+      isPPtrCurve: 1
+    - serializedVersion: 2
+      path: 1019596327
+      attribute: 0
+      script: {fileID: 0}
+      typeID: 137
+      customType: 21
+      isPPtrCurve: 1
+    - serializedVersion: 2
+      path: 1019596327
+      attribute: 0
+      script: {fileID: 0}
+      typeID: 137
+      customType: 21
+      isPPtrCurve: 1
     pptrCurveMapping:
+    - {fileID: 2100000, guid: faad4bfa32f6cf040ab9b5dffc7df525, type: 2}
+    - {fileID: 2100000, guid: f2b170d7556fb374b8672918d8e09461, type: 2}
+    - {fileID: 2100000, guid: f2b170d7556fb374b8672918d8e09461, type: 2}
+    - {fileID: 2100000, guid: f2b170d7556fb374b8672918d8e09461, type: 2}
     - {fileID: 2100000, guid: faad4bfa32f6cf040ab9b5dffc7df525, type: 2}
     - {fileID: 2100000, guid: faad4bfa32f6cf040ab9b5dffc7df525, type: 2}
   m_AnimationClipSettings:

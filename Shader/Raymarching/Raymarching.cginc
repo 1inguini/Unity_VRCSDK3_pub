@@ -140,8 +140,8 @@
             #ifdef GLOW
                 o.nearestDist = min(o.nearestDist, marchingDist);
             #endif
-            o.iter++; 
             o.intersect = marchingDist < o.din.pixSize;
+            o.iter++;
         }
         o.totalDistRatio = o.totalDist / maxDist;
         #ifdef COLORDIST
@@ -379,7 +379,7 @@
 
         #ifdef BACKGROUND
             #ifdef GLOW
-                o.color = result.intersect? o.color: _BackGround*result.totalDistRatio+pow(result.nearestDist+1, -K)*o.color;
+                o.color = result.intersect? o.color: _BackGround+pow(result.nearestDist+1, -K)*o.color;
             #else
                 o.color = lerp(result.intersect? o.color: _BackGround, _BackGround, result.totalDistRatio);
             #endif
