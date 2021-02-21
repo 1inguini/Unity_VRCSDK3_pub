@@ -7,7 +7,7 @@ Material:
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_Name: casqette_sunao
+  m_Name: Mint_Face_Modified
   m_Shader: {fileID: 4800000, guid: 3701d6a6f5f988b4a9cea92f1426a955, type: 3}
   m_ShaderKeywords: 
   m_LightmapFlags: 4
@@ -44,7 +44,7 @@ Material:
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _EmissionMap:
-        m_Texture: {fileID: 0}
+        m_Texture: {fileID: 2800000, guid: 49d0e5e3437fbe9419cb436621987e37, type: 3}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _EmissionMap2:
@@ -56,7 +56,7 @@ Material:
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _MainTex:
-        m_Texture: {fileID: 2800000, guid: e23d372a74534f548801f0e91ae80a8e, type: 3}
+        m_Texture: {fileID: 2800000, guid: 17a572ff36efe3e4fb4947f35eb39d26, type: 3}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _MatCap:
@@ -64,7 +64,7 @@ Material:
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _MetallicGlossMap:
-        m_Texture: {fileID: 2800000, guid: dbf677bf491a2d640af52f7e5bc1a14e, type: 3}
+        m_Texture: {fileID: 2800000, guid: 49d0e5e3437fbe9419cb436621987e37, type: 3}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _OcclusionMap:
@@ -72,7 +72,7 @@ Material:
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _OutLineMask:
-        m_Texture: {fileID: 2800000, guid: 2d3df512cb0a79a45abcc0646ee5610e, type: 3}
+        m_Texture: {fileID: 2800000, guid: e9ea8c2f825d6d9468bf3e56f28875ed, type: 3}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _OutLineTexture:
@@ -96,7 +96,7 @@ Material:
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _ShadeMask:
-        m_Texture: {fileID: 0}
+        m_Texture: {fileID: 2800000, guid: 95e528c199d39f845afe40d2c4f06c91, type: 3}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     m_Floats:
@@ -106,7 +106,7 @@ Material:
     - _BlightOutput: 1
     - _Bright: 1
     - _BumpScale: 1
-    - _Culling: 2
+    - _Culling: 0
     - _Cutoff: 0.5
     - _Cutout: 0.5
     - _DecalAnimX: 1
@@ -130,13 +130,13 @@ Material:
     - _EmissionAnimX: 1
     - _EmissionAnimY: 1
     - _EmissionAnimation: 0
-    - _EmissionBlink: 0
-    - _EmissionEnable: 0
-    - _EmissionFO: 0
-    - _EmissionFrequency: 1
+    - _EmissionBlink: 0.75
+    - _EmissionEnable: 1
+    - _EmissionFO: 1
+    - _EmissionFrequency: 0.25
     - _EmissionInTheDark: 0
     - _EmissionLighting: 0
-    - _EmissionMode: 0
+    - _EmissionMode: 1
     - _EmissionScrX: 0
     - _EmissionScrY: 0
     - _EmissionWaveform: 0
@@ -146,8 +146,8 @@ Material:
     - _GammaB: 1
     - _GammaG: 1
     - _GammaR: 1
-    - _GlossMapScale: 0.92
-    - _Glossiness: 0.5
+    - _GlossMapScale: 1
+    - _Glossiness: 0
     - _GlossyReflections: 1
     - _IgnoreTexAlphaE: 0
     - _IgnoreTexAlphaPE: 0
@@ -159,9 +159,9 @@ Material:
     - _LimitterMax: 1
     - _MainFO: 0
     - _MatCapLit: 3
-    - _MatCapStrength: 1
+    - _MatCapStrength: 2
     - _MatCapTexColor: 0
-    - _Metallic: 0
+    - _Metallic: 0.5
     - _MetallicTexColor: 1
     - _MinimumLight: 0
     - _Mode: 0
@@ -172,7 +172,7 @@ Material:
     - _OutLineEnable: 1
     - _OutLineFixScale: 0
     - _OutLineLighthing: 1
-    - _OutLineSize: 0.027
+    - _OutLineSize: 0.06
     - _OutLineTexColor: 0
     - _OutlineFO: 0
     - _Parallax: 0.02
@@ -181,9 +181,9 @@ Material:
     - _ParallaxAnimation: 0
     - _ParallaxBlink: 0
     - _ParallaxDepth: 1
-    - _ParallaxEmission: 1
+    - _ParallaxEmission: 2
     - _ParallaxEnable: 0
-    - _ParallaxFO: 0
+    - _ParallaxFO: 1
     - _ParallaxFrequency: 1
     - _ParallaxInTheDark: 0
     - _ParallaxLighting: 0
@@ -193,24 +193,24 @@ Material:
     - _ParallaxScrY: 0
     - _ParallaxWaveform: 0
     - _PointLight: 1
-    - _ReflectLit: 0
-    - _ReflectionEnable: 0
-    - _ReflectionFO: 0
-    - _RimLightingFO: 1
-    - _RimLit: 0.56
+    - _ReflectLit: 3
+    - _ReflectionEnable: 1
+    - _ReflectionFO: 1
+    - _RimLightingFO: 0
+    - _RimLit: 1
     - _RimLitEnable: 0
-    - _RimLitGradient: 1.178
+    - _RimLitGradient: 1
     - _RimLitLighthing: 1
     - _RimLitMode: 0
     - _RimLitTexColor: 0
     - _SHLight: 1
-    - _Shade: 0.5
-    - _ShadeColor: 1
-    - _ShadeGradient: 1
-    - _ShadeWidth: 1
+    - _Shade: 0
+    - _ShadeColor: 0.39
+    - _ShadeGradient: 0.842
+    - _ShadeWidth: 0.75
     - _ShadingFO: 1
     - _SmoothnessTextureChannel: 0
-    - _Specular: 0.225
+    - _Specular: 0
     - _SpecularHighlights: 1
     - _SpecularMask: 1
     - _SpecularSH: 1
@@ -237,9 +237,9 @@ Material:
     - _ZWrite: 1
     m_Colors:
     - _Color: {r: 1, g: 1, b: 1, a: 1}
-    - _CustomShadeColor: {r: 0.27066413, g: 0.24830896, b: 0.5660378, a: 1}
+    - _CustomShadeColor: {r: 0, g: 0, b: 0, a: 0}
     - _DecalColor: {r: 1, g: 1, b: 1, a: 1}
-    - _EmissionColor: {r: 0, g: 0, b: 0, a: 1}
-    - _OutLineColor: {r: 0, g: 0, b: 0, a: 1}
+    - _EmissionColor: {r: 1, g: 1, b: 1, a: 0}
+    - _OutLineColor: {r: 0.6698113, g: 0.4518066, b: 0.51661885, a: 1}
     - _ParallaxColor: {r: 1, g: 1, b: 1, a: 1}
-    - _RimLitColor: {r: 0.17647058, g: 0.42913756, b: 1, a: 1}
+    - _RimLitColor: {r: 1, g: 1, b: 1, a: 1}

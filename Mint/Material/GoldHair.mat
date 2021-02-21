@@ -7,7 +7,7 @@ Material:
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_Name: casqette_sunao
+  m_Name: GoldHair
   m_Shader: {fileID: 4800000, guid: 3701d6a6f5f988b4a9cea92f1426a955, type: 3}
   m_ShaderKeywords: 
   m_LightmapFlags: 4
@@ -56,7 +56,7 @@ Material:
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _MainTex:
-        m_Texture: {fileID: 2800000, guid: e23d372a74534f548801f0e91ae80a8e, type: 3}
+        m_Texture: {fileID: 2800000, guid: 4c325edc9459a7942ba9823b2b1ae107, type: 3}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _MatCap:
@@ -64,7 +64,7 @@ Material:
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _MetallicGlossMap:
-        m_Texture: {fileID: 2800000, guid: dbf677bf491a2d640af52f7e5bc1a14e, type: 3}
+        m_Texture: {fileID: 0}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _OcclusionMap:
@@ -72,7 +72,7 @@ Material:
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _OutLineMask:
-        m_Texture: {fileID: 2800000, guid: 2d3df512cb0a79a45abcc0646ee5610e, type: 3}
+        m_Texture: {fileID: 2800000, guid: 419867013540186449bf58d5a5fb36e6, type: 3}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _OutLineTexture:
@@ -92,7 +92,7 @@ Material:
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _RimLitMask:
-        m_Texture: {fileID: 0}
+        m_Texture: {fileID: 2800000, guid: ee4c198da28f62846b332e6c2e216650, type: 3}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _ShadeMask:
@@ -106,7 +106,7 @@ Material:
     - _BlightOutput: 1
     - _Bright: 1
     - _BumpScale: 1
-    - _Culling: 2
+    - _Culling: 0
     - _Cutoff: 0.5
     - _Cutout: 0.5
     - _DecalAnimX: 1
@@ -146,8 +146,8 @@ Material:
     - _GammaB: 1
     - _GammaG: 1
     - _GammaR: 1
-    - _GlossMapScale: 0.92
-    - _Glossiness: 0.5
+    - _GlossMapScale: 1
+    - _Glossiness: 0
     - _GlossyReflections: 1
     - _IgnoreTexAlphaE: 0
     - _IgnoreTexAlphaPE: 0
@@ -168,13 +168,13 @@ Material:
     - _MonochromeLit: 0
     - _OcclusionMode: 0
     - _OcclusionStrength: 1
-    - _OtherSettingsFO: 1
+    - _OtherSettingsFO: 0
     - _OutLineEnable: 1
     - _OutLineFixScale: 0
     - _OutLineLighthing: 1
-    - _OutLineSize: 0.027
+    - _OutLineSize: 0.06
     - _OutLineTexColor: 0
-    - _OutlineFO: 0
+    - _OutlineFO: 1
     - _Parallax: 0.02
     - _ParallaxAnimX: 1
     - _ParallaxAnimY: 1
@@ -197,20 +197,20 @@ Material:
     - _ReflectionEnable: 0
     - _ReflectionFO: 0
     - _RimLightingFO: 1
-    - _RimLit: 0.56
-    - _RimLitEnable: 0
-    - _RimLitGradient: 1.178
+    - _RimLit: 0.657
+    - _RimLitEnable: 1
+    - _RimLitGradient: 1.413
     - _RimLitLighthing: 1
     - _RimLitMode: 0
     - _RimLitTexColor: 0
     - _SHLight: 1
-    - _Shade: 0.5
-    - _ShadeColor: 1
-    - _ShadeGradient: 1
-    - _ShadeWidth: 1
-    - _ShadingFO: 1
+    - _Shade: 0
+    - _ShadeColor: 0.5
+    - _ShadeGradient: 0.75
+    - _ShadeWidth: 0.75
+    - _ShadingFO: 0
     - _SmoothnessTextureChannel: 0
-    - _Specular: 0.225
+    - _Specular: 1
     - _SpecularHighlights: 1
     - _SpecularMask: 1
     - _SpecularSH: 1
@@ -219,9 +219,9 @@ Material:
     - _StencilCompMode: 6
     - _StencilNumb: 4
     - _SunaoShaderType: 0
-    - _Toon: 8
-    - _ToonEnable: 1
-    - _ToonSharpness: 0.5
+    - _Toon: 9
+    - _ToonEnable: 0
+    - _ToonSharpness: 1
     - _UVAnimOtherTex: 1
     - _UVAnimX: 1
     - _UVAnimY: 1
@@ -237,9 +237,9 @@ Material:
     - _ZWrite: 1
     m_Colors:
     - _Color: {r: 1, g: 1, b: 1, a: 1}
-    - _CustomShadeColor: {r: 0.27066413, g: 0.24830896, b: 0.5660378, a: 1}
+    - _CustomShadeColor: {r: 0, g: 0, b: 0, a: 0}
     - _DecalColor: {r: 1, g: 1, b: 1, a: 1}
-    - _EmissionColor: {r: 0, g: 0, b: 0, a: 1}
-    - _OutLineColor: {r: 0, g: 0, b: 0, a: 1}
+    - _EmissionColor: {r: 0, g: 0, b: 0, a: 0}
+    - _OutLineColor: {r: 0.73333335, g: 0.41176474, b: 0.427451, a: 1}
     - _ParallaxColor: {r: 1, g: 1, b: 1, a: 1}
-    - _RimLitColor: {r: 0.17647058, g: 0.42913756, b: 1, a: 1}
+    - _RimLitColor: {r: 0.490074, g: 0.43676576, b: 0.6132076, a: 1}

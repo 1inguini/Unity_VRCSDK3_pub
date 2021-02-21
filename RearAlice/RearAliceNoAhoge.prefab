@@ -6428,16 +6428,6 @@ MonoBehaviour:
     mask: {fileID: 0}
     isDefault: 0
   - isEnabled: 0
-    type: 2
-    animatorController: {fileID: 0}
-    mask: {fileID: 0}
-    isDefault: 1
-  - isEnabled: 0
-    type: 3
-    animatorController: {fileID: 0}
-    mask: {fileID: 0}
-    isDefault: 1
-  - isEnabled: 0
     type: 4
     animatorController: {fileID: 9100000, guid: 6ff9e2a6f3a65d14797514f6d2cf323e,
       type: 2}
