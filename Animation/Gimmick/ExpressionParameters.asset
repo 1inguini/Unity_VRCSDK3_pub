@@ -15,33 +15,65 @@ MonoBehaviour:
   parameters:
   - name: VRCEmote
     valueType: 0
+    saved: 1
+    defaultValue: 0
   - name: Expression
     valueType: 0
+    saved: 1
+    defaultValue: 0
   - name: HairMaterial
     valueType: 0
+    saved: 1
+    defaultValue: 0
   - name: CubeToggle
     valueType: 0
+    saved: 1
+    defaultValue: 0
   - name: MirrorToggle
     valueType: 0
+    saved: 1
+    defaultValue: 0
   - name: PickupToggle
     valueType: 0
+    saved: 1
+    defaultValue: 0
   - name: ShowConstraints
     valueType: 0
+    saved: 1
+    defaultValue: 0
   - name: RaymarchingAreaToggle
     valueType: 0
+    saved: 1
+    defaultValue: 0
   - name: RaymarchingAreaCall
     valueType: 0
+    saved: 1
+    defaultValue: 0
   - name: RaymarchingDistance
     valueType: 1
+    saved: 1
+    defaultValue: 0
   - name: Resolution
     valueType: 1
+    saved: 1
+    defaultValue: 0
   - name: CubeSize
     valueType: 1
+    saved: 1
+    defaultValue: 0
   - name: CubeType
     valueType: 0
+    saved: 1
+    defaultValue: 0
+  - name: Pero
+    valueType: 2
+    saved: 1
+    defaultValue: 0
   - name: 
     valueType: 0
+    saved: 1
+    defaultValue: 0
   - name: 
     valueType: 0
-  - name: 
-    valueType: 0
+    saved: 1
+    defaultValue: 0

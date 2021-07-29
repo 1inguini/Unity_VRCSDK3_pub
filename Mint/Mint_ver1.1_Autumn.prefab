@@ -9102,9 +9102,10 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   launchedFromSDKPipeline: 0
-  completedSDKPipeline: 0
+  completedSDKPipeline: 1
   contentType: 0
   assetBundleUnityVersion: 
+  fallbackStatus: 0
 --- !u!114 &8066725334444429133
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -9349,6 +9350,8 @@ MonoBehaviour:
     name: Smile(Handopen)
   - hash: -1093396872
     name: Neutral
+  - hash: 1194429511
+    name: Mint_pero
   - hash: 997221401
     name: DefaultHair
   - hash: 409772945
