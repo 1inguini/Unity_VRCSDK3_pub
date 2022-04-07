@@ -63,6 +63,10 @@ Material:
         m_Texture: {fileID: 0}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
+    - _MatCapMask:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
     - _MetallicGlossMap:
         m_Texture: {fileID: 2800000, guid: dbf677bf491a2d640af52f7e5bc1a14e, type: 3}
         m_Scale: {x: 1, y: 1}
@@ -102,6 +106,7 @@ Material:
     m_Floats:
     - _Alpha: 1
     - _AlphaMaskStrength: 1
+    - _BlendOperation: 4
     - _BlightOffset: 0
     - _BlightOutput: 1
     - _Bright: 1
@@ -112,6 +117,8 @@ Material:
     - _DecalAnimX: 1
     - _DecalAnimY: 1
     - _DecalAnimation: 0
+    - _DecalBright: 0
+    - _DecalEmission: 1
     - _DecalEnable: 0
     - _DecalFO: 0
     - _DecalMirror: 0
@@ -159,6 +166,7 @@ Material:
     - _LimitterMax: 1
     - _MainFO: 0
     - _MatCapLit: 3
+    - _MatCapMaskEnable: 1
     - _MatCapStrength: 1
     - _MatCapTexColor: 0
     - _Metallic: 0
@@ -221,6 +229,8 @@ Material:
     - _SunaoShaderType: 0
     - _Toon: 8
     - _ToonEnable: 1
+    - _ToonGloss: 9
+    - _ToonGlossEnable: 0
     - _ToonSharpness: 0.5
     - _UVAnimOtherTex: 1
     - _UVAnimX: 1
@@ -231,7 +241,7 @@ Material:
     - _UVSec: 0
     - _Unlit: 0
     - _VersionH: 1
-    - _VersionL: 0
+    - _VersionL: 4
     - _VersionM: 4
     - _VertexColor: 0
     - _ZWrite: 1
@@ -240,6 +250,8 @@ Material:
     - _CustomShadeColor: {r: 0.27066413, g: 0.24830896, b: 0.5660378, a: 1}
     - _DecalColor: {r: 1, g: 1, b: 1, a: 1}
     - _EmissionColor: {r: 0, g: 0, b: 0, a: 1}
+    - _GlossColor: {r: 1, g: 1, b: 1, a: 1}
+    - _MatCapColor: {r: 1, g: 1, b: 1, a: 1}
     - _OutLineColor: {r: 0, g: 0, b: 0, a: 1}
     - _ParallaxColor: {r: 1, g: 1, b: 1, a: 1}
     - _RimLitColor: {r: 0.17647058, g: 0.42913756, b: 1, a: 1}

@@ -1,83 +1,26 @@
 fileFormatVersion: 2
-guid: ff5647fb52c7ed940b69e87f0396bb9a
+guid: fd067502464533142a0fb3f0aa4c908c
 ModelImporter:
   serializedVersion: 19301
-  internalIDToNameTable:
+  internalIDToNameTable: []
+  externalObjects:
   - first:
-      1: 100000
-    second: //RootNode
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: SVGMat.002
+    second: {fileID: 2100000, guid: 628dac43ed062e943a08be5452859b5f, type: 2}
   - first:
-      1: 100002
-    second: Cake
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: SVGMat.003
+    second: {fileID: 2100000, guid: 8ec612398e288bb4d962b3e656087826, type: 2}
   - first:
-      1: 100004
-    second: circle_empty
-  - first:
-      1: 100006
-    second: circle_empty.001
-  - first:
-      1: 100008
-    second: StrawBerry.001
-  - first:
-      1: 100010
-    second: StrawBerry_Center.001
-  - first:
-      4: 400000
-    second: //RootNode
-  - first:
-      4: 400002
-    second: Cake
-  - first:
-      4: 400004
-    second: circle_empty
-  - first:
-      4: 400006
-    second: circle_empty.001
-  - first:
-      4: 400008
-    second: StrawBerry.001
-  - first:
-      4: 400010
-    second: StrawBerry_Center.001
-  - first:
-      21: 2100000
-    second: No Name
-  - first:
-      21: 2100002
-    second: "\u30DE\u30C6\u30EA\u30A2\u30EB.001"
-  - first:
-      23: 2300000
-    second: Cake
-  - first:
-      23: 2300002
-    second: StrawBerry.001
-  - first:
-      23: 2300004
-    second: StrawBerry_Center.001
-  - first:
-      33: 3300000
-    second: Cake
-  - first:
-      33: 3300002
-    second: StrawBerry.001
-  - first:
-      33: 3300004
-    second: StrawBerry_Center.001
-  - first:
-      43: 4300000
-    second: Cake
-  - first:
-      43: 4300002
-    second: StrawBerry_Center.001
-  - first:
-      43: 4300004
-    second: StrawBerry.001
-  - first:
-      41386430: 2186277476908879412
-    second: ImportLogs
-  externalObjects: {}
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: SVGMat.004
+    second: {fileID: 2100000, guid: 24282aaf715d0604b8ac346b16ee4372, type: 2}
   materials:
-    materialImportMode: 0
+    materialImportMode: 1
     materialName: 0
     materialSearch: 1
     materialLocation: 1
@@ -115,7 +58,7 @@ ModelImporter:
     importBlendShapes: 1
     importCameras: 1
     importLights: 1
-    fileIdsGeneration: 1
+    fileIdsGeneration: 2
     swapUVChannels: 0
     generateSecondaryUV: 0
     useFileUnits: 1
@@ -160,7 +103,7 @@ ModelImporter:
     skeletonHasParents: 1
   lastHumanDescriptionAvatarSource: {instanceID: 0}
   autoGenerateAvatarMappingIfUnspecified: 1
-  animationType: 0
+  animationType: 2
   humanoidOversampling: 1
   avatarSetup: 0
   additionalBone: 0

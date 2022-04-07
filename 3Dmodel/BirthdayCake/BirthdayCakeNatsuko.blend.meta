@@ -1,5 +1,5 @@
 fileFormatVersion: 2
-guid: ff5647fb52c7ed940b69e87f0396bb9a
+guid: fdc87967db9f0e643b7670d8a0bc65f0
 ModelImporter:
   serializedVersion: 19301
   internalIDToNameTable:
@@ -22,6 +22,9 @@ ModelImporter:
       1: 100010
     second: StrawBerry_Center.001
   - first:
+      1: 100012
+    second: "\u30C6\u30AD\u30B9\u30C8"
+  - first:
       4: 400000
     second: //RootNode
   - first:
@@ -40,11 +43,14 @@ ModelImporter:
       4: 400010
     second: StrawBerry_Center.001
   - first:
+      4: 400012
+    second: "\u30C6\u30AD\u30B9\u30C8"
+  - first:
       21: 2100000
-    second: No Name
+    second: "\u30DE\u30C6\u30EA\u30A2\u30EB"
   - first:
       21: 2100002
-    second: "\u30DE\u30C6\u30EA\u30A2\u30EB.001"
+    second: No Name
   - first:
       23: 2300000
     second: Cake
@@ -55,6 +61,9 @@ ModelImporter:
       23: 2300004
     second: StrawBerry_Center.001
   - first:
+      23: 2300006
+    second: "\u30C6\u30AD\u30B9\u30C8"
+  - first:
       33: 3300000
     second: Cake
   - first:
@@ -63,6 +72,9 @@ ModelImporter:
   - first:
       33: 3300004
     second: StrawBerry_Center.001
+  - first:
+      33: 3300006
+    second: "\u30C6\u30AD\u30B9\u30C8"
   - first:
       43: 4300000
     second: Cake
@@ -73,11 +85,11 @@ ModelImporter:
       43: 4300004
     second: StrawBerry.001
   - first:
-      41386430: 2186277476908879412
-    second: ImportLogs
+      43: 4300006
+    second: "\u30C6\u30AD\u30B9\u30C8"
   externalObjects: {}
   materials:
-    materialImportMode: 0
+    materialImportMode: 1
     materialName: 0
     materialSearch: 1
     materialLocation: 1
@@ -137,7 +149,7 @@ ModelImporter:
     normalImportMode: 0
     tangentImportMode: 3
     normalCalculationMode: 4
-    legacyComputeAllNormalsFromSmoothingGroupsWhenMeshHasBlendShapes: 1
+    legacyComputeAllNormalsFromSmoothingGroupsWhenMeshHasBlendShapes: 0
     blendShapeNormalImportMode: 1
     normalSmoothingSource: 0
   referencedClips: []
