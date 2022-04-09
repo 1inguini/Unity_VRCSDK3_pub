@@ -1,101 +1,54 @@
-﻿#if UNITY_EDITOR
+﻿//#if UNITY_EDITOR
+//using AnimatorAsCode.V0;
+//using UnityEditor;
+//using UnityEditor.Animations;
+//using VRC.SDK3.Avatars.Components;
 
-using System;
-using System.Collections.Generic;
-using UnityEngine;
-using UnityEditor;
-using UnityEditor.Animations;
-using AnimatorController = UnityEditor.Animations.AnimatorController;
-using VRC.SDK3.Avatars.Components;
-using AnimatorAsCode.V0;
+//namespace Linguini.Aac.V0
+//{
+//    public class AacInvoker : EditorWindow
+//    {
+//        //private AacFlBase aac;
 
-namespace Linguini.Aac.V0
-{
-    public class AacInvoker : MonoBehaviour
-    {
-        public VRCAvatarDescriptor avatar;
+//        private VRCAvatarDescriptor _avatar;
 
-        public AnimatorController assetContainer;
+//        private AnimatorController _assetContainer;
 
-        public bool writeDefaults;
+//        private bool _writeDefaults;
 
-        public AacDefinition[] definitions;
-    }
+//        public AacDefinition[] definitions = new AacDefinition[1];
 
-    [CustomEditor(typeof(AacInvoker), true)]
-    public class AacInvoker_Editor : Editor
-    {
-        private List<Action> removeFns = new List<Action>();
+//        [MenuItem("AacDefinition/AacInvoker")]
+//        public static void ShowWindow() => GetWindow<AacInvoker>();
 
-        public override void OnInspectorGUI()
-        {
-            this.DrawDefaultInspector();
+//        public void Init()
+//        {
+//            foreach (var definition in definitions)
+//                if (definition.aac == null
+//                    || definition.avatar != _avatar
+//                    || definition.assetContainer != _assetContainer
+//                    || definition.writeDefaults != _writeDefaults)
+//                {
+//                    definition.avatar = _avatar;
+//                    definition.assetContainer = _assetContainer;
+//                    definition.writeDefaults = _writeDefaults;
+//                    definition.aac = null;
+//                    definition.Init();
+//                }
 
-            if (GUILayout.Button("Sync"))
-            {
-                var my = (AacInvoker)target;
+//        }
 
-                foreach (var definition in my.definitions)
-                {
-                    var aac = AacV0.Create(Config(definition));
+//        public void Commit()
+//        {
+//            foreach (var definition in definitions)
+//                definition.Commit();
+//        }
 
-                    aac.ClearPreviousAssets();
-
-                    removeFns.Add(definition.Generate(aac));
-                }
-            }
-            if (GUILayout.Button("Remove"))
-            {
-                foreach (var definition in ((AacInvoker)target).definitions)
-                {
-                    var aac = AacV0.Create(Config(definition));
-
-                    aac.ClearPreviousAssets();
-                }
-
-                foreach (var removeFn in removeFns)
-                {
-                    removeFn();
-                }
-            }
-
-            if (GUILayout.Button("Clean asset container"))
-            {
-                var my = (AacInvoker)target;
-                var allSubAssets =
-                    AssetDatabase
-                        .LoadAllAssetsAtPath(AssetDatabase
-                            .GetAssetPath(my.assetContainer));
-                foreach (var subAsset in allSubAssets)
-                {
-                    if (
-                        subAsset is AnimationClip ||
-                        subAsset is BlendTree ||
-                        subAsset is AvatarMask
-                    )
-                    {
-                        AssetDatabase.RemoveObjectFromAsset(subAsset);
-                    }
-                }
-            }
-        }
-
-        private AacConfiguration Config(AacDefinition definition)
-        {
-            var my = (AacInvoker)target;
-            return new AacConfiguration
-            {
-                SystemName = definition.GetType().ToString(),
-                AvatarDescriptor = my.avatar,
-                AnimatorRoot = my.avatar.transform,
-                DefaultValueRoot = my.avatar.transform,
-                AssetContainer = my.assetContainer,
-                AssetKey = definition.assetKey,
-                DefaultsProvider =
-                    new AacDefaultsProvider(writeDefaults: my.writeDefaults)
-            };
-        }
-    }
-}
-
-#endif
+//        public void Clean()
+//        {
+//            foreach (var definition in definitions)
+//                definition.Clean();
+//        }
+//    }
+//}
+//#endif
