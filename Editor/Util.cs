@@ -20,7 +20,7 @@ namespace Linguini.Script
             var child = self.Find(name);
             if (!child)
             {
-                child = new GameObject(name).transform;
+                child = ObjectFactory.CreateGameObject(name).transform;
                 child.parent = self;
             }
             return child;

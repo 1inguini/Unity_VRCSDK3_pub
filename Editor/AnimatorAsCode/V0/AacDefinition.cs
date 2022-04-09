@@ -6,7 +6,6 @@ using System.Linq;
 using System.Reflection;
 using UnityEditor;
 using UnityEditor.Animations;
-using UnityEditor.Presets;
 using UnityEngine;
 using UnityEngine.Animations;
 using VRC.SDK3.Avatars.Components;
@@ -25,19 +24,15 @@ namespace Linguini.Aac.V0
 
         public bool writeDefaults;
 
-        private static class Styles
-        {
-            public static GUIContent presetIcon = EditorGUIUtility.IconContent("Preset.Context");
-            public static GUIStyle iconButton = new GUIStyle("IconButton");
+        protected AacFlBase aac = null;
 
-        }
+        public AacDefinition() { }
 
         private void OnGUI()
         {
             Editor.CreateEditor(this).OnInspectorGUI();
         }
 
-        protected AacFlBase aac = null;
 
         public void Init()
         {
@@ -304,13 +299,7 @@ namespace Linguini.Aac.V0
     }
 
     [CustomEditor(typeof(AacDefinition), true)]
-    public class AacDefinition_Editor : Util.Invokable_Editor<AacDefinition> {
-        public override void OnInspectorGUI()
-        {
-            DrawHeader();
-            base.OnInspectorGUI();
-        }
-    }
+    public class AacDefinition_Editor : Util.Invokable_Editor<AacDefinition> { }
 
     //public class AacDefinitionReciver : PresetSelectorReceiver
     //{
